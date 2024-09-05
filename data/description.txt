@@ -1,0 +1,68 @@
+Hello Yann, 
+ca y est j’ai enfin traité les mesures  de resting pH de cet été !!!
+veux tu en discuter au tel? 
+brievement :
+il y a des cellules adherentes dans une plaque de plastique avec 96 puits. Tous les puits sont au depart identiques avec meme qtt de cellules et elles sont chargées avec du BCECF une sonde fluo a pH. La sonde est mise elle rentre passivement pendant 30 min puis est rincée et ne ressort pas car elle est au depart esterifiée, les esterases cellulaires desesterifient rendant le BCECF totalement (ou presque) impermeant.
+Donc on a une plaque de cellules fluo !! 
+"le BCECF a un pKa d’environ 6,98, un indicateur de pH ratiométrique à double excitation il est idéal pour mesurer les changements de pH cytosolique de la plupart des cellules. Les mesures de pH intracellulaires avec le BCECF sont effectuées en déterminant le rapport pH-dépendant de l’intensité d’émission (détectée à 535 nm) lorsque le colorant est excité à environ 490 nm par rapport à l’intensité d’émission lorsqu’il est excité à son point isobestique d’environ 440 nm."
+
+la plaque est faite en 
+8 lignes 
+12 colonnes
+j’ai ensuite mis la premiere colonne en solution dite de recuperation à savoir:
+120mM NaCl
+5mM KCl
+1mMMgCl2
+2mMCaCl2
+5mM glucose
+15mM Hepes
+pH7.4
+
+puis les colonnes 2/3/4/5/6 e, solution de charge (ammonium) :
+50mM NH4Cl
+70mM CHCl
+5mM KCl
+1mMMgCl2
+2mMCaCl2
+5mM glucose
+15mM MOPS
+pH7.4
+
+Et les colonnes 7 à 12 en solution de calibration 
+140mM KCl
+20mM HEPES ou mes selon le pH
+1mMCaCl2
+1mMMgCl2
+
+cette solution de calibration est mise a differents pH ici 
+6/6.3/6.5/6.9/7.1/7.4
+
+Une fois au pH desiré et avant de mettre sur les cellules j’ajoute de la nigericine, protonophore qui crée un echangeur K+/H+ dans les membranes, avec donc equilibration du pH entre solution ext appliquée et interieur de la cellule. 
+
+Je mets ca sur les cellules 
+colonne 7 pH 6
+colonne 8 pH 6.3
+ et ainsi de suite.
+
+Et je mets la plaque dans le safas qui va mesurer la fluo des puits aux deus longueurs d’ondes demandées en cinetique de 0 a 90 min.
+Ci joint les fichiers excell de deux manip independante
+avec chaque page = point de cinetique 
+pour l’analyse a chaque Temps je recalcule la courbe de calibration mais pas certaine que ce soit le mieux. 
+
+Voilou tu as normallement toutes les infos mais n’hesites pas a m’appeler pour des precisions si besoin.
+Cet aprem pas trop dispo mais demain matin a partir de 8H et jusqu’a  17H ok. 
+
+A+
+
+ 
+ 
+ 
+
+
+Mallorie Poet PhD
+LP2M UMR CNRS 7370
+Université Côte d'Azur
+Faculté de Médecine 28 av. Valombrose
+Tour Pasteur, 3eme étage
+06107 Nice Cedex 2
+
