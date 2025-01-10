@@ -1,0 +1,27 @@
+J’ai démarré ma these avec un travail bibliographique. Celui ci consistait à me mettre à jour sur la physique utilisée pour mon projet (électrophysiologie), à étudier les différentes méthodes des modèles mathématiques utilisés pour des applications en biologie (méthode des éléments finis), étudier les aspects biologique et chimique de mon projet (échange membranaire des ions)
+
+La premiere étape de mon projet étant d’étudier la diffusion j’ai commencé sur python à coder un premier modele. 
+Pour modéliser la diffusion intracellulaire j’ai défini un système dynamique de diffusion, celui ci contenant une seule espèce qui diffuse dans un espace clos sur un laps de temps défini, tout en tenant compte de la physique et de la chimie impliqué.
+
+J’ai complexifié ce modele en y ajoutant une reaction, nous avons donc un système dynamique de reaction diffusion avec plusieurs espèces. 
+
+---
+
+Afin d’étudier l’effet de la diffusion sur un milieu extracellulaire nous avons rajouté une condition au système dynamique : une membrane permeable aux espèces étudiées. Cela permet d’etudier l’effet d’une perturbation intracellulaire sur un espace extracellulaire en modélisant une membrane entre ces deux espaces.
+
+Aujourd’hui sur python jai donc: modelisé un système dynamique de reaction et diffusion avec une condition de transport des elements à travers une membrane.
+
+Un travail sur ComSol a également démarré, ComSol étant nouveau pour moi je suis en cours d’apprentissage de l’utilisation.
+Le but de mon utilisation de ComSol est également de créer des système dynamiques de reaction diffusion avec des conditions de transport des elements.
+
+
+Le début du travail de thèse consiste à s'approprier le contexte autant physico-chimique que biologique de la régulation du pH de système cellulaire comme décrit dans l'article de PLOS One co-écrit par les encadrant de Mme Le Clézio.
+En effet, l'homéostasie peut être vue comme l'état stationnaire d'un système dynamique décrit à la fois par les différentes réactions chimiques (aussi bien intra- que extra-cellulaires) et par les échanges ioniques à travers la membrane cellulaire.
+
+Ceci a déjà grandement été fait et nous désirons apporter de la spatialité au problème, en particulier savoir comment la diffusion des espèces influe sur la dynamique de l'homéostasie avec deux objectifs. 
+
+Tout d'abord, nous souhaitons vérifier que la propagation d'une perturbation (pH, force ionique...) induite se fait intracellulairement plus rapidement que la résolution spatio-temporelle actuelle des techniques de microscopie utilisées. Pour cela, nous développons conjointement des prototypes de modèles en Python (diffusion, réaction, échange de matière à travers la membrane) pour des géométries simples, mais aussi avec le logiciel multiphysique ComSol pour des géométries plus réalistes ultérieurement: les deux aspects sont en développements actifs.
+
+Dans un deuxième temps, nous commençons à évaluer le champ de diffusion extracellulaire de la perturbation interne pour en étudier la dynamique et le feedback éventuel sur le fonctionnement nominal de la cellule, et de voir à quel point il est nécessaire (ou pas) pour un tissu de drainer le fluide interstitiel afin de préserver l'homéostasie totale ou partielle.
+
+
