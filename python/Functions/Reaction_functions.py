@@ -8,16 +8,17 @@ Created on Mon Apr 14 14:52:28 2025
 
 import numpy as np
 
+
 '''REACTION EULER'''
 
-def reaction_euler(SPECIES, Grid_to_react, react_dict):
+def reaction_euler(list_SP, Grid_to_react, react_dict):
     """
     Calcule les concentrations dans l'espace apres une reaction
 
     Entrées :
     ----------
-    - SPECIES : list
-        Liste des noms des espèces étudiées
+    - list_SP : list
+        Liste des espèces étudiées, en Class : Specie
     - Grid_to_react : array
         Tableaux contenant les concentrations dans espace1 et espace2 au pas de temps précédent
         Format : array([nombre d'espèces, nombre de mailles d'espace])
@@ -37,13 +38,15 @@ def reaction_euler(SPECIES, Grid_to_react, react_dict):
     Methode : Euler
    
     """
- 
-    
     nb_react = len(react_dict)
     
-    NS = np.shape(Grid_to_react)[0]
+    NS = len(list_SP)
     
     Grid_to_react = np.array(Grid_to_react)
+    
+    SPECIES = []
+    for sp in list_SP :
+        SPECIES.append(sp.name[0])
     
     for R in range (0, nb_react):
         reaction0 = react_dict[f"reaction{R}"]

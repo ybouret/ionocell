@@ -19,6 +19,8 @@ from Functions import Reaction_functions
 from Functions import Diffusion_functions
 from Functions import Transport_functions
 
+import ionocell
+
 ppl.rcParams['figure.figsize'] = [13, 6]
 
 
@@ -26,15 +28,15 @@ ppl.rcParams['figure.figsize'] = [13, 6]
 
 '''CALCUL'''
 
-def calcul(list_sp, x1, x2, dict_CI, react_dict, all_dict, nbmailles_x, t_init, t_fin, delta_t, delta_x, TFreaction, params_mod):
+def calcul(list_Csp, x1, x2, dict_CI, react_dict, nbmailles_x, t_init, t_fin, delta_t, delta_x, TFreaction, params_mod):
     """
     Simule l'évolution des concentrations chimiques dans un espace 2D, 
     en prenant en compte les reactions possibles, la diffusion d'especes et le transport à travers une membrane
 
     Entrées :
     ----------
-    - list_sp : list
-        Liste des noms des espèces étudiées 
+    - list_Csp : list
+        Liste des espèces étudiées : en class
     - x1, x2 : array
         Tableaux des valeurs des mailles spatiales pour les deux espaces
     - dict_CI : dict
@@ -82,7 +84,7 @@ def calcul(list_sp, x1, x2, dict_CI, react_dict, all_dict, nbmailles_x, t_init, 
         - Calcule les intégrales spatiales des concentrations
     3. Retourne les résultats sous forme de tableaux et listes
     """
-    (Grid_CI_x1, Grid_CI_x2) = condition_initiale(list_sp, dict_CI)  # cherche les conditions initiales des especes
+    (Grid_CI_x1, Grid_CI_x2) = condition_initiale(list_Csp, dict_CI)  # cherche les conditions initiales des especes
     
     t = t_init
     times = []    
@@ -96,9 +98,11 @@ def calcul(list_sp, x1, x2, dict_CI, react_dict, all_dict, nbmailles_x, t_init, 
         
     CS_x1_dt = np.array([GridInit_x1])
     CS_x2_dt = np.array([GridInit_x2])
+    
+    
 
     while t < t_fin:  
-        (GridFinal_x1, GridFinal_x2) = iteration(list_sp, GridInit_x1, GridInit_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, all_dict, params_mod)
+        (GridFinal_x1, GridFinal_x2) = iteration(list_Csp, GridInit_x1, GridInit_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod)
                         # calcul les concentrations dans l'espace au temps d'apres
         
         CS_x1_dt = np.append(CS_x1_dt, [GridFinal_x1], axis=0)
@@ -123,15 +127,15 @@ def calcul(list_sp, x1, x2, dict_CI, react_dict, all_dict, nbmailles_x, t_init, 
 
 '''CONDITION INITIALES'''
 
-def condition_initiale(list_sp, dict_CI):
+def condition_initiale(list_Csp, dict_CI):
     
     """
     Initialise les conditions de départ des espèces dans deux espaces.
 
     Entrées :
     ----------
-    - list_sp : list
-        Liste des noms des espèces étudiées 
+    - list_Csp : list
+        Liste des espèces étudiées , en Class
     - dict_CI : dict
         Dictionnaire des conditions initiales pour chaque espèce
         Format : {espèce_x1: array, espèce_x2: array}.
@@ -154,10 +158,11 @@ def condition_initiale(list_sp, dict_CI):
     CI_x1 = []
     CI_x2 = []
     
-    for specie in list_sp:
+    for specie in list_Csp:
+        name_sp = specie.name[0]
         
-        Val_CI_x1 = dict_CI[f"{specie}_x1"]
-        Val_CI_x2 = dict_CI[f"{specie}_x2"]
+        Val_CI_x1 = dict_CI[f"{name_sp}_x1"]
+        Val_CI_x2 = dict_CI[f"{name_sp}_x2"]
         
         CI_x1.append(Val_CI_x1)
         CI_x2.append(Val_CI_x2)
@@ -167,14 +172,14 @@ def condition_initiale(list_sp, dict_CI):
 
 '''ITERATION'''
 
-def iteration(list_sp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, all_dict, params_mod):
+def iteration(list_Csp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod):
     """
     Calcule les concentrations dans l'espace pour le pas de temps suivant.
 
     Entrées :
     ----------
-    - list_sp : list
-        Liste des noms des espèces étudiées
+    - list_Csp : list
+        Liste des espèces étudiées, en Class
     - TSx1, TSx2 : array
         Tableaux contenant les concentrations dans espace1 et espace2 au pas de temps précédent
         Format : array([nombre d'espèces, nombre de mailles d'espace])
@@ -216,11 +221,7 @@ def iteration(list_sp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, delt
     4. Retourne les tableaux `F_x1` et `F_x2` contenant les concentrations pour le pas de temps suivant
     """
     
-    NS = len(list_sp)
-
-    coeffdiff_dict = all_dict["D"]
-    perm_dict = all_dict["P"]
-    charge_dict = all_dict["Z"]
+    NS = len(list_Csp)
     
     # Gradient = params_mod[0]
     Type_mb = params_mod[0]
@@ -233,27 +234,33 @@ def iteration(list_sp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, delt
 
     # REACTION
     if TFreaction:
-        (Greactx1) = Reaction_functions.reaction_euler(list_sp, Grid_to_analyse_x1, react_dict)
-        (Greactx2) = Reaction_functions.reaction_euler(list_sp, Grid_to_analyse_x2, react_dict)
+        (Greactx1) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse_x1, react_dict)
+        (Greactx2) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse_x2, react_dict)
         
     else : # if no reaction described
         Greactx1 = Grid_to_analyse_x1
         Greactx2 = Grid_to_analyse_x2
     
-    for species in range(0, NS):
+    for num_sp in range(0, NS):
+        
+        coeffdiff_sp = list_Csp[num_sp].diff
+        perm_sp = list_Csp[num_sp].perm
+        charge_sp = list_Csp[num_sp].charge
+        
+        
         # DIFFUSION
-        (Gdiff_x1) = Diffusion_functions.diffusion(list_sp, species, Greactx1, nbmailles_x1, delta_t, delta_x1, coeffdiff_dict)
-        (Gdiff_x2) = Diffusion_functions.diffusion(list_sp, species, Greactx2, nbmailles_x2, delta_t, delta_x2, coeffdiff_dict)
+        (Gdiff_x1) = Diffusion_functions.diffusion(list_Csp, num_sp, Greactx1, nbmailles_x1, delta_t, delta_x1, coeffdiff_sp)
+        (Gdiff_x2) = Diffusion_functions.diffusion(list_Csp, num_sp, Greactx2, nbmailles_x2, delta_t, delta_x2, coeffdiff_sp)
         
         # TRANSPORT à la membrane
         if Type_mb == "osmotique implicite":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo(list_sp, species, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_dict)
+            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_sp)
             
         elif Type_mb == "osmotique analytique":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo_analyt(list_sp, species, Gdiff_x1, Gdiff_x2, nbmailles_x, perm_dict, delta_t, delta_x)
+            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo_analyt(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, perm_sp, delta_t, delta_x)
                 
         elif Type_mb == "electro-osmotique implicite":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_electro_osmo_impl(list_sp, species, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_dict, charge_dict)
+            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_electro_osmo_impl(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_sp, charge_sp)
 
         elif Type_mb == "non permeable":
             (Gtransp_x1, Gtransp_x2) = (Gdiff_x1, Gdiff_x2)
@@ -316,45 +323,54 @@ thickness = max(delta_x1, delta_x2)/2 #largeur de la membrane pour le plot
 
 '''description d'especes'''
 
+# test avec Class
+
+Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1, _perm_coeff = 10, _charge = +1, _marker= '-o')
+Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= '-s')
+NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 1, _perm_coeff = 10, _charge = 0, _marker= '-d')
+OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= '-h')
+H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= '-s')
+H20 = ionocell.Specie(_specie_name = "H2O", _diff_coeff = 1, _perm_coeff = 1, _charge = 0, _marker= '-v')
+
 # liste des especes utilisées poru la simulation (decrites: "Na", "Cl", "OH", "NaCl")
 # si pas decrite: rajouter les caracteristiques dans les dict + les CI
 # SEULE LISTE A MODIFIER POUR AJOUTER/ENLEVER DES ESPECES POUR UNE SIMULATION
-SPECIES = ["Na"] 
+SPECIES = [Na, Cl] 
 
 Marker = ["o", "d", "s", "h", "v"]
 
 
-# COEFF DE DIFFUSION
-d_coeffdiff = {
-    "Na": 1,
-    "Cl": 1,
-    "NaCl": 1, 
-    "OH": 1, 
-    "H": 1, 
-    "H2O": 1}
+# # COEFF DE DIFFUSION
+# d_coeffdiff = {
+#     "Na": 1,
+#     "Cl": 1,
+#     "NaCl": 1, 
+#     "OH": 1, 
+#     "H": 1, 
+#     "H2O": 1}
 
-# PERMEABILITE
-d_perm = {
-    "Na": 10, # 1e-8,
-    "Cl": 10, # 1e-7, 
-    "OH": 1, # 1e-10,
-    "NaCl": 10, 
-    "H": 1, 
-    "H2O": 1}
+# # PERMEABILITE
+# d_perm = {
+#     "Na": 10, # 1e-8,
+#     "Cl": 10, # 1e-7, 
+#     "OH": 1, # 1e-10,
+#     "NaCl": 10, 
+#     "H": 1, 
+#     "H2O": 1}
 
-# CHARGE 
-d_charge = {
-    "Na": +1, # 1e-8,
-    "Cl": -1, # 1e-7, 
-    "H2O": 0, 
-    "OH": -1, 
-    "H": +1, # 1e-10,
-    "NaCl": 0}
+# # CHARGE 
+# d_charge = {
+#     "Na": +1, # 1e-8,
+#     "Cl": -1, # 1e-7, 
+#     "H2O": 0, 
+#     "OH": -1, 
+#     "H": +1, # 1e-10,
+#     "NaCl": 0}
 
-all_dict = {
-    "D": d_coeffdiff, 
-    "P": d_perm, 
-    "Z": d_charge}
+# all_dict = {
+#     "D": d_coeffdiff, 
+#     "P": d_perm, 
+#     "Z": d_charge}
 
 '''reaction'''
 
@@ -408,7 +424,7 @@ IC_dict = {
 # Gradient = Calcul_gradient_avant[2]
 
 Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
-Type_mb = Membrane_list[1]
+Type_mb = Membrane_list[2]
 
 Params_calcul = [Type_mb]
 
@@ -433,7 +449,7 @@ Params_calcul = [Type_mb]
 
 """ Calculs """
 
-(TCF_x1, TCF_x2, integrals_TCx1, integrals_TCx2, times) = calcul(SPECIES, x1, x2, IC_dict, d_react, all_dict, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Params_calcul)
+(TCF_x1, TCF_x2, integrals_TCx1, integrals_TCx2, times) = calcul(SPECIES, x1, x2, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Params_calcul)
 
 
 NS = len(SPECIES)

@@ -10,14 +10,14 @@ import numpy as np
 
 '''DIFFUSION'''
 
-def diffusion(SPECIES, species, Grid_to_diff, nbmailles_x, delta_t, delta_x, dict_coeffdiff):
+def diffusion(list_SP, specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
     Étape de diffusion des espèces à travers l'espace pour un pas de temps.
 
     Entrées :
     ----------
-    - SPECIES : list
-        Liste des noms des espèces étudiées
+    - list_SP : list
+        Liste des espèces étudiées, en Class : Specie
     - species : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Grid_to_diff_x1, Grid_to_diff_x2 : arrays
@@ -29,8 +29,8 @@ def diffusion(SPECIES, species, Grid_to_diff, nbmailles_x, delta_t, delta_x, dic
         Pas de temps pour la simulation
     - delta_x : float
         Pas d'espace pour la simulation
-    - dict_coeffdiff : dict
-        Dictionnaire contenant les coefficients de diffusion pour chaque espèce
+    - v_coeffdiff : int
+        Value coefficient de diffusion pour specie
 
     Sorties :
     ----------
@@ -54,7 +54,7 @@ def diffusion(SPECIES, species, Grid_to_diff, nbmailles_x, delta_t, delta_x, dic
         Correspond aux concentrations au pas de temps précédent avec la reaction d'implementer (si TFreaction = True)
     """      
     
-    D = dict_coeffdiff.get(SPECIES[species])
+    D = v_coeffdiff
     
     alpha = (D * delta_t) / delta_x**2 
         
@@ -62,11 +62,11 @@ def diffusion(SPECIES, species, Grid_to_diff, nbmailles_x, delta_t, delta_x, dic
 
     # diffusion inside
     for i in range(1, nbm-1): # 1 à 30 
-        Grid_to_diff[species][i] = Grid_to_diff[species][i] + alpha *(Grid_to_diff[species][i+1] - 2*Grid_to_diff[species][i] + Grid_to_diff[species][i-1])
+        Grid_to_diff[specie][i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
         
     # no flux: boundary
-    Grid_to_diff[species][0] = (4*Grid_to_diff[species][1] - Grid_to_diff[species][2])/3  # à x = 0 
-    Grid_to_diff[species][nbm-1] = (4*Grid_to_diff[species][nbm-2] - Grid_to_diff[species][nbm-3])/3 # à x = 1
+    Grid_to_diff[specie][0] = (4*Grid_to_diff[specie][1] - Grid_to_diff[specie][2])/3  # à x = 0 
+    Grid_to_diff[specie][nbm-1] = (4*Grid_to_diff[specie][nbm-2] - Grid_to_diff[specie][nbm-3])/3 # à x = 1
 
     G_diff = Grid_to_diff 
 
