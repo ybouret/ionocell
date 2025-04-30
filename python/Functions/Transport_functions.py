@@ -11,7 +11,7 @@ import numpy as np
 
 '''flux osmotique, implicite'''
 
-def transport_mb_osmo(list_SP, specie, Grid_1, Grid_2, nbmailles_x, delta_t, delta_x, v_perm):
+def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm):
     """
     Étape de transport à travers la membrane via un gradient osmotique, de 1 vers 2
 
@@ -55,19 +55,22 @@ def transport_mb_osmo(list_SP, specie, Grid_1, Grid_2, nbmailles_x, delta_t, del
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
     
-    Cgrad_x1 = Grid_1
-    Cgrad_x2 = Grid_2
+    px1 = Mb_1[0]
+    px2 = Mb_1[1]
     
-    nbm_x1 = nbmailles_x[0]
+    Cgrad_x1 = Grid_L[px1]
+    Cgrad_x2 = Grid_L[px2]
     
-    delta_x1 = delta_x[0]
-    delta_x2 = delta_x[1]
+    nbm_x1 = nbmailles_x[px1]
+    
+    delta_x1 = delta_x[px1]
+    delta_x2 = delta_x[px2]
     
     P = v_perm
     
     # gradient osmotique  : a verifier pour CG/dx)
-    CG = Cgrad_x1[specie][nbm_x1 - 1]
-    CD = Cgrad_x2[specie][0]
+    CG = Cgrad_x1[nbm_x1 - 1]
+    CD = Cgrad_x2[0]
 
     grad_osmo = ((CG / delta_x1) - (CD / delta_x2))
     flux_osmo = P * grad_osmo
@@ -75,14 +78,19 @@ def transport_mb_osmo(list_SP, specie, Grid_1, Grid_2, nbmailles_x, delta_t, del
                    
     # exchange at the membrane : osmotique echange 
     # Euler application
-    Grid_1[specie][nbm_x1-1] = Grid_1[specie][nbm_x1-1] - flux_osmo*delta_t
-    Grid_2[specie][0] = Grid_2[specie][0] + flux_osmo*delta_t
+    Grid_1 = Grid_L[px1]
+    Grid_2 = Grid_L[px2]
     
-    return (Grid_1, Grid_2)
+    Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - flux_osmo*delta_t
+    Grid_2[0] = Grid_2[0] + flux_osmo*delta_t
+    
+    Grid_L[px1] = Grid_1
+    Grid_L[px2] = Grid_2
+    return (Grid_L)
 
 '''flux osmotique, analytique'''
 
-def transport_mb_osmo_analyt(list_SP, specie, Grid_1, Grid_2, nbmailles_x, v_perm, delta_t, delta_x):
+def transport_mb_osmo_analyt(list_SP, Grid_L, Mb_1, nbmailles_x, v_perm, delta_t, delta_x):
     """
     Étape de transport à travers la membrane via un gradient osmotique: 1 vers 2
 
@@ -99,8 +107,8 @@ def transport_mb_osmo_analyt(list_SP, specie, Grid_1, Grid_2, nbmailles_x, v_per
         Value coefficient de perméabilité 
     - delta_t : float
         Pas de temps pour la simulation
-    - delta_x : float
-        Pas d'espace pour la simulation
+    - delta_x : list
+        Pas d'espace pour la simulation :[dx1, dx2]
     
     Sorties :
     ----------
@@ -122,24 +130,24 @@ def transport_mb_osmo_analyt(list_SP, specie, Grid_1, Grid_2, nbmailles_x, v_per
     - Cgrad_x1, Cgrad_x2 : array
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
-   
-    Cgrad_x1 = Grid_1
-    Cgrad_x2 = Grid_2
+    px1 = Mb_1[0]
+    px2 = Mb_1[1]
     
-    nbm_x1 = nbmailles_x[0]
-    nbm_x2 = nbmailles_x[1]
+    Cgrad_x1 = Grid_L[px1]
+    Cgrad_x2 = Grid_L[px2]
+    
+    nbm_x1 = nbmailles_x[px1]
+    
+    deltax1 = delta_x[px1]
+    deltax2 = delta_x[px2]
     
     #permeabilité
     P = v_perm
     
-    # delta x 
-    deltax1 = delta_x[0]
-    deltax2 = delta_x[1]
+    vp2 = - ( (P/deltax1) + (P/deltax2) )
     
-    vp2 = - ( (P/deltax2) + (P/deltax1) )
-    
-    C0_x1 = Cgrad_x1[specie][nbm_x1-1]
-    C0_x2 = Cgrad_x2[specie][0]
+    C0_x1 = Cgrad_x1[nbm_x1-1]
+    C0_x2 = Cgrad_x2[0]
     
     # Calcul des constantes C1 et C2
     C1 = (C0_x1 + (C0_x2 * (deltax2 / deltax1)) ) / (1 + (deltax2 / deltax1))
@@ -150,10 +158,16 @@ def transport_mb_osmo_analyt(list_SP, specie, Grid_1, Grid_2, nbmailles_x, v_per
     Ct_x2 = C1 + C2 * np.exp(vp2*delta_t)
     
     # on a les concentrations qui sont transportés : on les implemente
-    Grid_1[specie][nbm_x1-1] = Ct_x1
-    Grid_2[specie][0] =  Ct_x2
+    Grid_1 = Grid_L[px1]
+    Grid_2 = Grid_L[px2]
     
-    return (Grid_1, Grid_2)
+    Grid_1[nbm_x1-1] = Ct_x1
+    Grid_2[0] =  Ct_x2
+    
+    Grid_L[px1] = Grid_1
+    Grid_L[px2] = Grid_2
+    
+    return (Grid_L)
        
 '''flux electroosmotique, implicite'''
 
@@ -185,7 +199,8 @@ def PSI_fct(u):
 
     return (res)
 
-def transport_mb_electro_osmo_impl(SPECIES, specie, Grid_1, Grid_2, nbmailles_x, delta_t, delta_x, v_perm, v_charge):
+def transport_mb_electro_osmo_impl(SPECIES, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge):
+    # delta x a implementer 
     """
     Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014 : 1 vers 2 
     
@@ -233,18 +248,20 @@ def transport_mb_electro_osmo_impl(SPECIES, specie, Grid_1, Grid_2, nbmailles_x,
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
     
-    Cgrad_x1 = Grid_1
-    Cgrad_x2 = Grid_2
+    px1 = Mb_1[0]
+    px2 = Mb_1[1]
+    
+    Cgrad_x1 = Grid_L[px1]
+    Cgrad_x2 = Grid_L[px2]
+    
+    nbm_x1 = nbmailles_x[px1]
+    
+    deltax1 = delta_x[px1]
+    deltax2 = delta_x[px2]
     
     # print("x1 = interieur, x2 = exterieur")
     P = v_perm
     Z = v_charge
-    
-    nbm_x1 = nbmailles_x[0]
-    nbm_x2 = nbmailles_x[1]
-    
-    delta_x1 = delta_x[0]
-    delta_x2 = delta_x[1]
     
     # valeur fixe :
     F = 96485 #cst de Faraday, J·V−1·mol−1
@@ -257,17 +274,23 @@ def transport_mb_electro_osmo_impl(SPECIES, specie, Grid_1, Grid_2, nbmailles_x,
     
     Psi = PSI_fct(Z*Zeta)
     
-    Xint = (Cgrad_x1[specie][nbm_x1-1])# /delta_x1
-    Xout = (Cgrad_x2[specie][0]) # /delta_x2
+    Xint = (Cgrad_x1[nbm_x1-1])# /delta_x1
+    Xout = (Cgrad_x2[0]) # /delta_x2
     
     # calcul le flux
     J = -P*Psi*(Xout - Xint * np.exp(Z*Zeta))
     
     # exchange at the membrane 
-    Grid_1[specie][nbm_x1-1] = Grid_1[specie][nbm_x1-1] - (J*delta_t) # *delta_x1
-    Grid_2[specie][0] = Grid_2[specie][0] + (J*delta_t) # *delta_x2
+    Grid_1 = Grid_L[px1]
+    Grid_2 = Grid_L[px2]
+    
+    Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - (J*delta_t) # *delta_x1
+    Grid_2[0] = Grid_2[0] + (J*delta_t) # *delta_x2
+    
+    Grid_L[px1] = Grid_1
+    Grid_L[px2] = Grid_2
 
-    return (Grid_1, Grid_2)
+    return (Grid_L)
 
 
 '''flux electro osmotique, analytique'''
@@ -278,8 +301,8 @@ def transport_mb_electro_osmo_analy(SPECIES, specie, Cgrad_x1, Cgrad_x2, TF_x1, 
     Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014
     """
     # print("x1 = interieur, x2 = exterieur")
-    P = dict_perm.get(SPECIES[specie])
-    Z = dict_charge.get(SPECIES[specie])
+    P = v_perm
+    Z = v_charge
     
     # valeur fixe :
     F = 96485 #cst de Faraday, J·V−1·mol−1

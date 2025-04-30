@@ -42,6 +42,7 @@ class Specie:
 
 # test = Specie("Na", 1, 10, +1, '-d')
 
+# Specie(_specie_name = "Na", _diff_coeff = 1, _perm_coeff = 10, _charge = +1, _marker= '-d')
 
 class Reaction:
     """ params for reactions """
@@ -56,6 +57,18 @@ class Reaction:
     def show(self):
         print("reaction ? " , self.TF)
 
+class Space :
+    
+    def __init__(self, _number, _type, _two_wall, _one_inje):
+        
+        self.nb = _number
+        self.type = _type
+        self.walls = _two_wall
+        self.inje = _one_inje
+    
+    def show(self):
+        print("which space ?" , self.nb)
+    
 
 
 

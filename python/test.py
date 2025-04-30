@@ -1,1 +1,0 @@
-from ionocell import Gridgrid = Grid(0.1)

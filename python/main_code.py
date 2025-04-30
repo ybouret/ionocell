@@ -18,17 +18,19 @@ from moviepy import ImageSequenceClip
 from Functions import Reaction_functions
 from Functions import Diffusion_functions
 from Functions import Transport_functions
+from Functions import Make_video
 
 import ionocell
 
 ppl.rcParams['figure.figsize'] = [13, 6]
 
 
+
 """ Definitions des fonctions """
 
 '''CALCUL'''
 
-def calcul(list_Csp, x1, x2, dict_CI, react_dict, nbmailles_x, t_init, t_fin, delta_t, delta_x, TFreaction, params_mod):
+def calcul(list_Csp, list_space, dict_CI, react_dict, nbmailles_x, t_init, t_fin, delta_t, delta_x, TFreaction, params_mod, Mb_dict, Space_info):
     """
     Simule l'évolution des concentrations chimiques dans un espace 2D, 
     en prenant en compte les reactions possibles, la diffusion d'especes et le transport à travers une membrane
@@ -37,8 +39,8 @@ def calcul(list_Csp, x1, x2, dict_CI, react_dict, nbmailles_x, t_init, t_fin, de
     ----------
     - list_Csp : list
         Liste des espèces étudiées : en class
-    - x1, x2 : array
-        Tableaux des valeurs des mailles spatiales pour les deux espaces
+    - list_space : list
+        List contenant les arrays: Tableaux des valeurs des mailles spatiales pour les deux espaces
     - dict_CI : dict
         Dictionnaire des conditions initiales pour chaque espèce
         Format : {espèce: {"espace1": array, "espace2": array}}
@@ -84,50 +86,53 @@ def calcul(list_Csp, x1, x2, dict_CI, react_dict, nbmailles_x, t_init, t_fin, de
         - Calcule les intégrales spatiales des concentrations
     3. Retourne les résultats sous forme de tableaux et listes
     """
-    (Grid_CI_x1, Grid_CI_x2) = condition_initiale(list_Csp, dict_CI)  # cherche les conditions initiales des especes
+
+    Grid_CI_L = condition_initiale(list_Csp, dict_CI, list_space)  # cherche les conditions initiales des especes
     
     t = t_init
-    times = []    
+    times = [] 
     
     print("La membrane modelisée est ", params_mod[0])
     
-    integrals_Gridx1 = []
-    integrals_Gridx2 = []
+    integrals_Grid_L = []
     
-    (GridInit_x1, GridInit_x2) =  (Grid_CI_x1, Grid_CI_x2)
-        
-    CS_x1_dt = np.array([GridInit_x1])
-    CS_x2_dt = np.array([GridInit_x2])
+    CS_dt = []
     
+    GridFinal_L = Grid_CI_L
     
-
     while t < t_fin:  
-        (GridFinal_x1, GridFinal_x2) = iteration(list_Csp, GridInit_x1, GridInit_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod)
-                        # calcul les concentrations dans l'espace au temps d'apres
         
-        CS_x1_dt = np.append(CS_x1_dt, [GridFinal_x1], axis=0)
-              
-        CS_x2_dt = np.append(CS_x2_dt, [GridFinal_x2], axis=0)
-            
+        CS_dt.append(GridFinal_L)
+        
+        (GridFinal_L) = iteration(list_Csp, GridFinal_L, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod, Mb_dict, Space_info, t)
+                
+        
         # calcul des intégrales: methodes des trapezes
-        integral_Gridx1 = np.trapz(GridFinal_x1, x1)
-        integral_Gridx2 = np.trapz(GridFinal_x2, x2)
-       
-        integrals_Gridx1.append(integral_Gridx1)
-        integrals_Gridx2.append(integral_Gridx2)
+        integral_Grid_L = []
         
-        # print(t)
+        for space in range(0, len(Grid_CI_L)): #nb d'espace
+            
+            integral_Grid = np.trapz(GridFinal_L[space], list_space[space])
+            integral_Grid_L.append(integral_Grid)
+       
+        integrals_Grid_L.append(integral_Grid_L)
+        
+        
+        # pour injection : si c = 0.95 a la frontiere
+        
 
         times.append(t)
         t += delta_t # passe au temps suivant (a la maille de temps d'apres)   
-        
-    return (CS_x1_dt, CS_x2_dt, integrals_Gridx1, integrals_Gridx2, times)
+
+        print(t)
+    CS_dt.append(Grid_CI_L)
+    return (CS_dt, integrals_Grid_L, times)
 
 
 
 '''CONDITION INITIALES'''
 
-def condition_initiale(list_Csp, dict_CI):
+def condition_initiale(list_Csp, dict_CI, list_space):
     
     """
     Initialise les conditions de départ des espèces dans deux espaces.
@@ -153,26 +158,23 @@ def condition_initiale(list_Csp, dict_CI):
     3. Ajoute les conditions initiales aux tableaux `TCI_x1` et `TCI_x2`
     4. Retourne les tableaux contenant les conditions initiales pour les deux espaces
     """
-    
-    
-    CI_x1 = []
-    CI_x2 = []
-    
-    for specie in list_Csp:
-        name_sp = specie.name[0]
-        
-        Val_CI_x1 = dict_CI[f"{name_sp}_x1"]
-        Val_CI_x2 = dict_CI[f"{name_sp}_x2"]
-        
-        CI_x1.append(Val_CI_x1)
-        CI_x2.append(Val_CI_x2)
-        
-    return (CI_x1, CI_x2)
+    CI_L = []
+    for i in range (1, len(list_space)+1):
+        CI_specie = []
+        for specie in list_Csp:
+            name_sp = specie.name[0]
+            
+            Val_CI = dict_CI[f"{name_sp}_x{i}"]
+            
+            CI_specie.append(Val_CI)
+        CI_L.append(CI_specie)
+
+    return (CI_L)
 
 
 '''ITERATION'''
 
-def iteration(list_Csp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod):
+def iteration(list_Csp, Grid_to_analyse_L, nbmailles_x, delta_t, delta_x, TFreaction, react_dict, params_mod, Mb_dict, Space_info, t):
     """
     Calcule les concentrations dans l'espace pour le pas de temps suivant.
 
@@ -226,55 +228,101 @@ def iteration(list_Csp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, del
     # Gradient = params_mod[0]
     Type_mb = params_mod[0]
     
-    # achangere pour automatisation
-    nbmailles_x1 = nbmailles_x[0]
-    nbmailles_x2 = nbmailles_x[1]
     
     # step analyse : 1. reaction 2. diffusion 3. transport
-
+    Greact_L = []
+    
+    
     # REACTION
-    if TFreaction:
-        (Greactx1) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse_x1, react_dict)
-        (Greactx2) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse_x2, react_dict)
-        
-    else : # if no reaction described
-        Greactx1 = Grid_to_analyse_x1
-        Greactx2 = Grid_to_analyse_x2
-    
-    for num_sp in range(0, NS):
-        
-        coeffdiff_sp = list_Csp[num_sp].diff
-        perm_sp = list_Csp[num_sp].perm
-        charge_sp = list_Csp[num_sp].charge
-        
-        
-        # DIFFUSION
-        (Gdiff_x1) = Diffusion_functions.diffusion(list_Csp, num_sp, Greactx1, nbmailles_x1, delta_t, delta_x1, coeffdiff_sp)
-        (Gdiff_x2) = Diffusion_functions.diffusion(list_Csp, num_sp, Greactx2, nbmailles_x2, delta_t, delta_x2, coeffdiff_sp)
-        
-        # TRANSPORT à la membrane
-        if Type_mb == "osmotique implicite":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_sp)
+    for space1 in range (0, len(Grid_to_analyse_L)):
+        Grid_to_analyse = Grid_to_analyse_L[space1]
+
+        if TFreaction:
+            (Greact_space) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse , react_dict)
             
-        elif Type_mb == "osmotique analytique":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_osmo_analyt(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, perm_sp, delta_t, delta_x)
+        else : # if no reaction described
+            Greact_space = Grid_to_analyse
+        Greact_L.append(Greact_space)
+
+    Gdiff_L = []
+    # DIFFUSION
+    for space2 in range (0, len(Greact_L)):
+        
+        Grid_to_diff = Greact_L[space2]
+
+        nbmaille_space = nbmailles_x[space2]
+        delta_x_space = delta_x[space2]
+        
+        Grid_diff = []
+        for num_sp1 in range(0, NS):
+            
+            coeffdiff_sp = list_Csp[num_sp1].diff
+            
+            if Space_info[space2].walls :
+                (Gdiff_sp) = Diffusion_functions.diffusion_two_wall(list_Csp, num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+            
+            elif Space_info[space2].inje :
+                if t < 0.5 : 
+                    (Gdiff_sp) = Diffusion_functions.diffusion_one_wall_one_inject(list_Csp, num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+                else : 
+                    (Gdiff_sp) = Diffusion_functions.diffusion_one_wall_one_supp(list_Csp, num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+        
+            
+        Grid_diff = Gdiff_sp
+
+        Gdiff_L.append(np.array(Grid_diff))
+        
+    # TRANSPORT à la membrane
+    Gtranp_L = []
+    
+    modif_c = []
+    for num_sp2 in range(0, NS):
+        
+        perm_sp = list_Csp[num_sp2].perm
+        charge_sp = list_Csp[num_sp2].charge
+        
+        # Grid_to_transp_sp = np.copy(Gdiff_L[:,num_sp2,:])
+        # Grid_to_transp_sp = Gdiff_L[num_sp2].copy()
+        # Grid_to_transp_sp = Gdiff_L[:,num_sp2,:]
+        
+        Grid_to_transp_sp = [arr[num_sp2, :] for arr in Gdiff_L]
                 
-        elif Type_mb == "electro-osmotique implicite":
-            (Gtransp_x1, Gtransp_x2) = Transport_functions.transport_mb_electro_osmo_impl(list_Csp, num_sp, Gdiff_x1, Gdiff_x2, nbmailles_x, delta_t, delta_x, perm_sp, charge_sp)
-
-        elif Type_mb == "non permeable":
-            (Gtransp_x1, Gtransp_x2) = (Gdiff_x1, Gdiff_x2)
-
-        # elif Type_mb == "electro-osmotique analytique":
-        else :
-            print("no transport defined")
-            sys.exit(1)
+        for Mb in Mb_dict:
+            pos_Mb = Mb_dict[Mb]
             
-    # no more step:
-    GFinal_x1 = Gtransp_x1
-    GFinal_x2 = Gtransp_x2
+            if Type_mb == "osmotique implicite":
+                (Grid_to_transp_sp) = Transport_functions.transport_mb_osmo(list_Csp, Grid_to_transp_sp, pos_Mb, nbmailles_x, delta_t, delta_x, perm_sp)
+                
+            elif Type_mb == "osmotique analytique":
+                (Grid_to_transp_sp) = Transport_functions.transport_mb_osmo_analyt(list_Csp, Grid_to_transp_sp, pos_Mb, nbmailles_x, perm_sp, delta_t, delta_x)
+
+            elif Type_mb == "electro-osmotique implicite":
+                # a verifier
+                (Grid_to_transp_sp) = Transport_functions.transport_mb_electro_osmo_impl(list_Csp, Grid_to_transp_sp, pos_Mb, nbmailles_x, delta_t, delta_x, perm_sp, charge_sp)
     
-    return (GFinal_x1, GFinal_x2)
+            elif Type_mb == "non permeable":
+                (Grid_to_transp_sp) = (Grid_to_transp_sp)
+    
+            # elif Type_mb == "electro-osmotique analytique":
+                # en cours
+                
+            else :
+                print("no transport defined")
+                sys.exit(1)
+        
+        modif_c.append(Grid_to_transp_sp)
+        
+    # re shape en gardant les liste : 
+    for i in range(0, len(modif_c[0])):
+        modif_c_space = []
+        for i1 in range(0, len(modif_c)):
+            modif_c_space.append(modif_c[i1][i])
+        Gtranp_L.append(modif_c_space)
+    
+    Grid_final = Gtranp_L
+    # Gtranp_L = np.stack(modif_c, axis=1)
+        
+    return (Grid_final)
 
 
 
@@ -282,17 +330,23 @@ def iteration(list_Csp, Grid_to_analyse_x1, Grid_to_analyse_x2, nbmailles_x, del
 
 '''parametres modifiables'''
 
-nbmailles_x1 = 2**5
-nbmailles_x2 = 2**5
-nbmailles_x = [nbmailles_x1, nbmailles_x2]
+# 2**5, round(100*(4/9))
+nbmailles_x1 = round(100*(4/9))
+nbmailles_x2 = round(100*(1/9))
+nbmailles_x3 = round(100*(4/9))
+nbmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
+# nbmailles_x = [nbmailles_x1, nbmailles_x2]
 
 # ratio x1 vs x2: taille dans la cuve
-Respace1 = 1/2
-Respace2 = 1-(Respace1) # 1 car taille cuve = 1
+Respace1 = 4/9
+Respace2 = 1/9
+Respace3 = 4/9
+Respace = [Respace1, Respace2, Respace3]
+# Respace = [Respace1, Respace2]
 
 # TEMPS: de 0 à 1
 ti = 0
-tf = 0.5
+tf = 1
 
 # CONSERVATION : seuil de tolérance
 tolerance = 0.05
@@ -306,71 +360,43 @@ var_g = 0.005 # largeur de la gaussienne
 # PAS D'ESPACE
 delta_x1 = Respace1/(nbmailles_x1-1)
 delta_x2 = Respace2/(nbmailles_x2-1)
-delta_x = [delta_x1, delta_x2]
+delta_x3 = Respace3/(nbmailles_x3-1)
+delta_x = [delta_x1, delta_x2, delta_x3]
+# delta_x = [delta_x1, delta_x2]
 
 # espace
 x1 = np.arange(nbmailles_x1)* delta_x1
 x2 = np.arange(nbmailles_x2)* delta_x2 
-
+x3 = np.arange(nbmailles_x3)* delta_x3
+# spacesL = [x1, x2]
+spacesL = [x1, x2, x3]
 
 # PAS DE TEMPS
 delta_t1 = 0.9 * (delta_x1**2) / 2 # 0.9 * delta_t max 
 delta_t2 = 0.9 * (delta_x2**2) / 2 # 0.9 * delta_t max 
-delta_t = min(delta_t1,delta_t2) # recuperer le delta_t min = celui avec le plus de precisions
+delta_t3 = 0.9 * (delta_x3**2) / 2 # 0.9 * delta_t max 
+delta_t = min(delta_t1,delta_t2, delta_t3) # recuperer le delta_t min = celui avec le plus de precisions
+# delta_t = min(delta_t1,delta_t2)
 
-
-thickness = max(delta_x1, delta_x2)/2 #largeur de la membrane pour le plot
+thickness = min(delta_x1, delta_x2, delta_x3)/2 #largeur de la membrane pour le plot
 
 '''description d'especes'''
 
 # test avec Class
 
-Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1, _perm_coeff = 10, _charge = +1, _marker= '-o')
-Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= '-s')
-NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 1, _perm_coeff = 10, _charge = 0, _marker= '-d')
-OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= '-h')
-H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= '-s')
-H20 = ionocell.Specie(_specie_name = "H2O", _diff_coeff = 1, _perm_coeff = 1, _charge = 0, _marker= '-v')
+Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 'o')
+Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= 's')
+NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 1, _perm_coeff = 10, _charge = 0, _marker= 'd')
+OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 'd')
+H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's')
+H20 = ionocell.Specie(_specie_name = "H2O", _diff_coeff = 1, _perm_coeff = 1, _charge = 0, _marker= 'v')
 
 # liste des especes utilisées poru la simulation (decrites: "Na", "Cl", "OH", "NaCl")
 # si pas decrite: rajouter les caracteristiques dans les dict + les CI
 # SEULE LISTE A MODIFIER POUR AJOUTER/ENLEVER DES ESPECES POUR UNE SIMULATION
-SPECIES = [Na, Cl] 
+SPECIES = [Na] 
 
 Marker = ["o", "d", "s", "h", "v"]
-
-
-# # COEFF DE DIFFUSION
-# d_coeffdiff = {
-#     "Na": 1,
-#     "Cl": 1,
-#     "NaCl": 1, 
-#     "OH": 1, 
-#     "H": 1, 
-#     "H2O": 1}
-
-# # PERMEABILITE
-# d_perm = {
-#     "Na": 10, # 1e-8,
-#     "Cl": 10, # 1e-7, 
-#     "OH": 1, # 1e-10,
-#     "NaCl": 10, 
-#     "H": 1, 
-#     "H2O": 1}
-
-# # CHARGE 
-# d_charge = {
-#     "Na": +1, # 1e-8,
-#     "Cl": -1, # 1e-7, 
-#     "H2O": 0, 
-#     "OH": -1, 
-#     "H": +1, # 1e-10,
-#     "NaCl": 0}
-
-# all_dict = {
-#     "D": d_coeffdiff, 
-#     "P": d_perm, 
-#     "Z": d_charge}
 
 '''reaction'''
 
@@ -384,7 +410,15 @@ Marker = ["o", "d", "s", "h", "v"]
 TFreaction = False
 d_react = {}
 
-    
+
+x1_info = ionocell.Space(_number = 0, _type = "Cell", _two_wall = False, _one_inje = True ) 
+x2_info = ionocell.Space(_number = 1, _type = "Extra", _two_wall = True, _one_inje = False ) 
+x3_info =  ionocell.Space(_number = 2, _type = "Cell", _two_wall = True, _one_inje = False ) 
+
+
+Info_space = [x1_info, x2_info, x3_info]
+
+
 '''Condition initiale des elements'''
 
 # longueur de la cuve: arbitraire
@@ -402,18 +436,23 @@ cst_1_x2 = np.ones(nbmailles_x2)
 
 Null_x1 = np.zeros(nbmailles_x1) 
 Null_x2 = np.zeros(nbmailles_x2)
+Null_x3 = np.zeros(nbmailles_x3)
 
 IC_dict = {
-    "Na_x1": Gauss_1_4_x1, 
+    "Na_x1": Null_x1, 
     "Na_x2": Null_x2, 
-    "Cl_x1": cst_1_x1, 
-    "Cl_x2": Null_x2, 
+    "Na_x3": Null_x3, 
+    
+    "Cl_x1": Null_x1, 
+    "Cl_x2": Null_x2,
+    "Cl_x3": Null_x3,
+    
     "NaCl_x1": Null_x1, 
     "NaCl_x2": Null_x2,
     "OH_x1": Null_x1, 
     "OH_x2": Gauss_3_4_x2, 
-    "H_x1": Gauss_1_4_x1, 
-    "H_x2": Null_x2, 
+    "H_x1": Null_x1, 
+    "H_x2": Gauss_3_4_x2, 
     "H2O_x1": Null_x1, 
     "H2O_x2": Null_x2
     }
@@ -424,53 +463,46 @@ IC_dict = {
 # Gradient = Calcul_gradient_avant[2]
 
 Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
-Type_mb = Membrane_list[2]
+Type_mb = Membrane_list[1]
 
 Params_calcul = [Type_mb]
 
-# Caract_space = {
-#     "x1" : {
-#         "BordG" : "W", 
-#         "BordD" : "Mb"
-#         }, 
-#     "x2": {
-#         "BordG" : "Mb",
-#         "BordD" : "W"
-#         }
-#     }
 
-# Caract_Mb = {
-#     "MB1" : {
-#         "BordG" : 0, 
-#         "BordD" : 1
-#         }
-#     }
+Mb_dict = {
+    "Mb1" : [0,1],
+    "Mb2" : [1,2]}
 
 
 """ Calculs """
 
-(TCF_x1, TCF_x2, integrals_TCx1, integrals_TCx2, times) = calcul(SPECIES, x1, x2, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Params_calcul)
+(Final_Grid_L, integrals_grid_L, times) = calcul(SPECIES, spacesL, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Params_calcul, Mb_dict, Info_space)
 
+
+integrals_grid_L = np.array(integrals_grid_L)
 
 NS = len(SPECIES)
 
 
-""" Analyse de la conservation """    
-integrals_TCF_tot = []
-for i in range(0, np.shape(integrals_TCx1)[0]):
-    integrals_TCF_tot.append(integrals_TCx1[i]+integrals_TCx2[i])
+""" Analyse de la conservation """  
 
-initial_TCF = integrals_TCF_tot[0]
-variations_relative = [abs((s - initial_TCF) / initial_TCF) for s in integrals_TCF_tot]
+result_int = np.zeros(integrals_grid_L[:, 0, :].shape) 
 
-for species in range(0,NS):    
+for i in range(integrals_grid_L.shape[1]): 
+    result_int += integrals_grid_L[:, i, :]
+
+init_int = result_int[0]
+
+variations_relative = [abs((s - init_int) / init_int) for s in result_int]
+
+for species in range(0, NS):    
     variations_relative_specie = [array[species] for array in variations_relative]
     non_conservative = any(var > tolerance for var in variations_relative_specie)
     
     if non_conservative:
-        print("Le modèle avec", SPECIES[species], "n'est pas conservatif.")
+        print("Le modèle avec", SPECIES[species].name, "n'est pas conservatif.")
     else:
-        print("Le modèle", SPECIES[species], "est conservatif.")
+        print("Le modèle", SPECIES[species].name, "est conservatif.")
+
 
 
 """ Plot resultats """
@@ -486,105 +518,258 @@ colors = [discrete_cmap(i) for i in range(nb_courbe_t)]
 
 '''parametres plot'''
 
-#recuperation des elements espacés en log
+#recuperation des elements espacés en log: sur tout le temps
 log_indices = np.logspace(0, np.log10(len(times)-1), nb_courbe_t, dtype=int) 
 times_courbelog = np.array(times)[log_indices.astype(int)]
-                                  
-
-TCF_x1_courbelog = TCF_x1[log_indices.astype(int)]
-TCF_x2_courbelog = TCF_x2[log_indices.astype(int)]
-
-TCF_courbelog = np.concatenate((TCF_x1_courbelog, TCF_x2_courbelog), axis = 2)
 
 
-espace_2cuves = np.concatenate((x1, x2+Respace1), axis = None)
-espace_2cuves_mb = espace_2cuves
+#recuperation des elements espacés en log: sur la moitié du temps
+log_indices_1 = np.logspace(0, np.log10((len(times)/2)-1), int(nb_courbe_t/2), dtype=int)
+log_indices_2 = np.logspace(0, np.log10((len(times)/2)-1), int(nb_courbe_t/2), dtype=int) + round(len(times)/2)
+
+log_indices_2log = np.concatenate([log_indices_1, log_indices_2])
+times_courbelog_2log = np.array(times)[log_indices_2log]
 
 
-espace_2cuves_mb[int(nbmailles_x1):] += thickness
-
-    # au premier temps
-TCF0 = np.concatenate((TCF_x1, TCF_x2), axis = 2)
-
-    # au dernier temps
-TCFF = np.concatenate((TCF_x1, TCF_x2), axis = 2)
-
+real_spacesL = []
+real_Rspace = []
+for i in range(len(spacesL)):
+    offset = sum(Respace[:i])
+    real_spacesL.append(spacesL[i] + offset)
+    real_Rspace.append(Respace[i] + offset)
 
 '''Plot final'''
 
-ppl.figure() 
-for species in range(0,NS):
-    ppl.plot(espace_2cuves, TCF0[0][species], color = 'black', marker=Marker[species], markersize=4, label=SPECIES[species])
-    for i, t in enumerate(times_courbelog):
-        ppl.plot(espace_2cuves, TCF_courbelog[i][species], color = colors[i], marker=Marker[species], markersize=4)
 
-ppl.axvspan(Respace1, Respace1 + thickness, color='grey', alpha=0.5)  # griser la membrane
+Res = []
+for i in range(0, len(Final_Grid_L[0])):
+    modif_Final_Grid_L = []
+    for i1 in range(0, len(Final_Grid_L)):
+        modif_Final_Grid_L.append(Final_Grid_L[i1][i])
+    Res.append(modif_Final_Grid_L)
+    
+# 1 log
+ppl.figure()
+sp_name=[]
+
+for space in range (0, len(spacesL)):
+    
+    to_plot = Res[space]
+    # print(len(to_plot))
+    x_values = real_spacesL[space]
+    
+    for species in range(0, NS):
+        # pour t = 0 
+        label = SPECIES[species].name if space == 0 else None
+        
+        ppl.plot(x_values, to_plot[0][species], color = 'black', marker=SPECIES[species].marker, markersize=4, label=label)
+        
+        for i, t in enumerate(times_courbelog):
+            to_plot_log = [to_plot[i] for i in log_indices]   
+            
+            ppl.plot(x_values, to_plot_log[i][species], color = colors[i], marker=SPECIES[species].marker, markersize=4)
+# griser les membranes : 
+
+for Mb in Mb_dict:
+    pos_Mb = Mb_dict[Mb]
+    i = pos_Mb[0]
+        
+    space1 = real_Rspace[i]
+    space2 = space1 + thickness
+     
+    ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
     
 ppl.plot([], [], color='black', label='t=0')  
 for i,t in enumerate(times_courbelog):
     ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
 
-ppl.title(f"Concentration des especes {SPECIES} dans l'espace au cours du temps")
+ppl.title(f"Concentration des especes {sp_name} dans l'espace au cours du temps")
 ppl.xlabel("Position dans l'espace (x)")
 ppl.ylabel("Concentration")
-ppl.legend()
+ppl.legend(loc='upper right')
 ppl.grid()
+
 
 # savefig("electro_osmo_impl_Na_t1_Vm_p70.pdf")
 
 ppl.show()
 
-'''plot au premier temps (CI)'''
+
+# # 2 log
 # ppl.figure()
-# for species in range(0,NS):
-#     ppl.plot(espace_2cuves, TCFF[0][species], color = 'black', marker=Marker[species], markersize=4, label=SPECIES[species])
+# sp_name=[]
+
+# for space in range (0, len(spacesL)):
     
-# ppl.title(f"Concentration finale (times = {times[len(times)-1]} ) de A en fonction de l'espace")
+#     to_plot = Final_Grid_L[:, space, :, :]
+#     x_values = real_spacesL[space]
+    
+#     for species in range(0, NS):
+#         # pour t = 0 
+#         label = SPECIES[species].name if space == 0 else None
+        
+#         ppl.plot(x_values, to_plot[0][species], color = 'black', marker=SPECIES[species].marker, markersize=4, label=label)
+        
+#         for i, t in enumerate(times_courbelog_2log):
+#             to_plot_log = [to_plot[i] for i in log_indices_2log]   
+            
+#             ppl.plot(x_values, to_plot_log[i][species], color = colors[i], marker=SPECIES[species].marker, markersize=4)
+# # griser les membranes : 
+
+# for Mb in Mb_dict:
+#     pos_Mb = Mb_dict[Mb]
+#     i = pos_Mb[0]
+        
+#     space1 = real_Rspace[i]
+#     space2 = space1 + thickness
+     
+#     ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+    
+# ppl.plot([], [], color='black', label='t=0')  
+# for i,t in enumerate(times_courbelog):
+#     ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
+
+# ppl.title(f"Concentration des especes {sp_name} dans l'espace au cours du temps")
 # ppl.xlabel("Position dans l'espace (x)")
-# ppl.ylabel("Concentration finale")
-# ppl.legend()
+# ppl.ylabel("Concentration")
+# ppl.legend(loc='upper right')
 # ppl.grid()
 
+
+# # savefig("electro_osmo_impl_Na_t1_Vm_p70.pdf")
+
+# ppl.show()
+
+
+
+
+'''plot seulement une espece (definir species=)'''
+
+# ppl.figure()
+# sp_name=[]
+
+# for space in range (0, len(spacesL)):
+    
+#     to_plot = Final_Grid_L[:, space, :, :]
+#     x_values = real_spacesL[space]
+    
+#     species = 1
+#         # pour t = 0 
+#     label = SPECIES[species].name if space == 0 else None
+#     sp_name.append(SPECIES[species].name)if space == 0 else None
+        
+#     ppl.plot(x_values, to_plot[0][species], color = 'black', marker=SPECIES[species].marker, markersize=4, label=label)
+        
+#     for i, t in enumerate(times_courbelog):
+#         to_plot_log = [to_plot[i] for i in log_indices]   
+            
+#         ppl.plot(x_values, to_plot_log[i][species], color = colors[i], marker=SPECIES[species].marker, markersize=4)
+# # griser les membranes : 
+
+# for Mb in Mb_dict:
+#     pos_Mb = Mb_dict[Mb]
+#     i = pos_Mb[0]
+        
+#     space1 = real_Rspace[i]
+#     space2 = space1 + thickness
+     
+#     ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+    
+# ppl.plot([], [], color='black', label='t=0')  
+# for i,t in enumerate(times_courbelog):
+#     ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
+
+# ppl.title(f"Concentration des especes {sp_name} dans l'espace au cours du temps")
+# ppl.xlabel("Position dans l'espace (x)")
+# ppl.ylabel("Concentration")
+# ppl.legend(loc='upper right')
+# ppl.grid()
+
+
+# # savefig("electro_osmo_impl_Na_t1_Vm_p70.pdf")
+
+# ppl.show()
+
+'''plot au premier temps (CI)'''
+
+
+# ppl.figure()
+# sp_name=[]
+
+# for space in range (0, len(spacesL)):
+#     to_plot = Final_Grid_L[:, space, :, :]
+#     x_values = real_spacesL[space]
+    
+#     for species in range(0, NS):
+#         # pour t = 0 
+        
+#         label = SPECIES[species].name if space == 0 else None
+#         sp_name.append(SPECIES[species].name)if space == 0 else None
+        
+#         ppl.plot(x_values, to_plot[0][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
+#  # griser les membranes : 
+
+# for Mb in Mb_dict:
+#      pos_Mb = Mb_dict[Mb]
+#      i = pos_Mb[0]
+         
+#      space1 = real_Rspace[i]
+#      space2 = space1 + thickness
+      
+#      ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+
+# ppl.title(f"Concentration initiale (times = 0 ) de A en fonction de l'espace")
+# ppl.xlabel("Position dans l'espace (x)")
+# ppl.ylabel("Concentration initale")
+# ppl.legend(loc='upper right')
+# ppl.grid()
+
+
+# ppl.show()
 
 
 '''Plot au dernier temps'''
 ppl.figure()
-for species in range(0,NS):
-    ppl.plot(espace_2cuves, TCFF[-1][species], marker=Marker[species], markersize=4, label=SPECIES[species])
+sp_name=[]
+
+for space in range (0, len(spacesL)):
     
-ppl.title(f"Concentration finale (times = {times[len(times)-1]} ) de {SPECIES} dans l'espace")
+    to_plot = Res[space]
+    x_values = real_spacesL[space]
+    
+    for species in range(0, NS):
+        # pour t = 0 
+        label = SPECIES[species].name if space == 0 else None
+        
+        ppl.plot(x_values, to_plot[-1][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
+# griser les membranes : 
+
+for Mb in Mb_dict:
+    pos_Mb = Mb_dict[Mb]
+    i = pos_Mb[0]
+        
+    space1 = real_Rspace[i]
+    space2 = space1 + thickness
+     
+    ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+
+ppl.title(f"Concentration finale (times = {times[len(times)-1]} ) de {sp_name} dans l'espace")
 ppl.xlabel("Position dans l'espace (x)")
 ppl.ylabel("Concentration finale")
-ppl.legend()
+ppl.legend(loc='upper right')
 ppl.grid()
 
-# ppl.savefig("electroosmo_n70_NaCl_t1_P10.pdf")
 
+ppl.show()
 
-
-'''Plot dans l'espace 2'''
-# ppl.figure() 
-# for species in range(0,NS):
-#     ppl.plot(x2, TCF_x2_courbelog[0][species], color = 'black', marker=Marker[species], markersize=4, label=SPECIES[species])
-#     for i, t in enumerate(times_courbelog):
-#         ppl.plot(x2, TCF_x2_courbelog[i][species], color = colors[i], marker=Marker[species], markersize=4)
-        
-# ppl.plot([], [], color='black', label='t=0')
-# for i, t in enumerate(times_courbelog):
-#     ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
-
-# ppl.title("Concentration de Aen fonction de l'espace x2 pour différents temps")
-# ppl.xlabel("Position dans l'espace 2 (x2)")
-# ppl.ylabel("Concentration")
-# ppl.legend()
-# ppl.grid()
 
 
 '''Plot de la conservation'''
 # integral
+
 # ppl.figure()
 # for species in range(0,NS):
-#     ppl.plot(times, [array[species] for array in integrals_TCF_tot], label=SPECIES[species])
+#     ppl.plot(times, [array[species] for array in result_int], label=SPECIES[species].name)
 # ppl.xlabel("Temps")
 # ppl.ylabel("Integrale sur l'espace")
 # ppl.title("Vérification de la conservation")
@@ -593,109 +778,28 @@ ppl.grid()
 
 
 # variations relatives
-# ppl.figure()
-# for species in range(0,NS):
-#     ppl.plot(times, [array[species] for array in variations_relative], label=SPECIES[species])
-# ppl.xlabel("Temps")
-# ppl.ylabel("Variations relative")
-# ppl.title("Vérification de la conservation")
-# ppl.legend()
-# ppl.grid()
+ppl.figure()
+for species in range(0,NS): 
+    ppl.plot(times, [array[species] for array in variations_relative], label=SPECIES[species].name)
+ppl.xlabel("Temps")
+ppl.ylabel("Variations relative")
+ppl.title("Vérification de la conservation")
+ppl.legend()
+ppl.grid()
+
+# ppl.savefig("conservation_IS_small_middle_t1_diff_bmailles_Ptrue.pdf")
 
 
 ppl.show()
 
 
 """Video variation du temps params classique"""
-nb_coubre_video = 50
 
-#recuperation des elements espacés en log
-log_indices_v = np.logspace(0, np.log10(len(times)-1), nb_coubre_video, dtype=int) 
-times_courbelog_v = np.array(times)[log_indices_v.astype(int)]
-                                  
+# change_log_time = False
 
-TCF_x1_courbelog_v = TCF_x1[log_indices_v.astype(int)]
-TCF_x2_courbelog_v = TCF_x2[log_indices_v.astype(int)]
+# images = Make_video.generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES, thickness, change_log_time, nb_frames=150)
 
-TCF_courbelog_v = np.concatenate((TCF_x1_courbelog_v, TCF_x2_courbelog_v), axis = 2)
+# Make_video.create_video_from_images(images, "IS_small_middle_space_t1_diff_nbmailles_Ptrue.mp4", fps=8)
 
-data = TCF_courbelog_v
-
-# description des couleurs en fct du nb de courbe
-cmap = ppl.get_cmap("tab20")  
-colors_v = [cmap(i / 50) for i in range(50)]
-
-
-def generate_images(data):
-    num_frames, num_curves, num_points = data.shape  # (temps, courbes, points)
-    x = espace_2cuves
-    
-    images = []
-    for t in range(num_frames):
-        fig, ax = ppl.subplots()
-        
-        if 0 < t < num_frames-1:
-            for i in range(num_curves):
-                ax.plot(x, data[t, i, :], color = colors_v[t], marker=Marker[i], markersize=4, label=f't={times_courbelog_v[t]:.4f}')
-                ax.plot(espace_2cuves, TCF0[0][i], color = 'black', marker=Marker[i], markersize=4, label=f'{SPECIES[i]}, t=0')
-            # ax.plot([], [], color=colors_v[t], label=f't={times_courbelog_v[t]:.4f}')    
-            time_round = round(times_courbelog_v[t],5)
-            
-            ax.set_xlabel("Position dans l'espace (x)")
-            ax.set_ylabel("Concentration")
-            ax.set_title(f'times = {time_round}')
-        
-        elif t == 0 :
-            for i in range(num_curves):
-                ax.plot(espace_2cuves, TCF0[0][i], color = 'black', marker=Marker[i], markersize=4, label=f'{SPECIES[i]}, t=0')
-                
-            ax.set_xlabel("Position dans l'espace (x)")
-            ax.set_ylabel("Concentration")
-            ax.set_title(f'Concentration de {SPECIES[i]} à t=0')
-            
-        else :
-            for i in range(num_curves):
-                ax.plot(espace_2cuves, TCF0[0][i], color = 'black', marker=Marker[i], markersize=4, label=f'{SPECIES[i]}, t=0')
-                
-                for a in enumerate(times_courbelog_v[:-1]):
-                    ax.plot(espace_2cuves, data[a][i], color = colors_v[a], marker=Marker[i], markersize=4)
-                 
-                ax.plot(espace_2cuves, TCFF[len(times)-1][i], color = 'black', marker=Marker[i], markersize=4, label=f'{SPECIES[i]}, {round(times_courbelog_v[-1],5)}')
-                
-            for c, d in enumerate(times_courbelog_v):
-                if c %3 == 1:
-                    ax.plot([], [], color=colors_v[c], label=f't={d:.4f}')
-                    
-                    
-            time_round = round(times_courbelog_v[t],5)
-                
-            ax.set_xlabel("Position dans l'espace (x)")
-            ax.set_ylabel("Concentration")
-            ax.set_title(f'Evolution de la concentration de {SPECIES[i]} pour t entre [0,{tf}]')
-            
-        ax.axvspan(Respace1, Respace1 + thickness, color='grey', alpha=0.5)  # griser la membrane
-        ax.legend()
-        ax.set_ylim(0, 1)  # peut etre modifie
-        ax.grid()
-            
-        
-            
-        # Convertir la figure en image NumPy
-        fig.canvas.draw()
-        image = np.array(fig.canvas.renderer.buffer_rgba())
-        images.append(image)
-        
-        ppl.close(fig)
-
-    return images
-
-# Convertir les images en vidéo
-def create_video_from_images(images, output_file, fps=8):
-    clip = ImageSequenceClip(images, fps=fps)
-    clip.write_videofile(output_file, codec='libx264')
-
-# Générer les images et créer la vidéo
-# images = generate_images(data)
-# create_video_from_images(images, 'transport_electroosmo_impl_Na_n70_t1.mp4')
 
 
