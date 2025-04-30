@@ -54,12 +54,11 @@ def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_pe
     - Cgrad_x1, Cgrad_x2 : array
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
-    
     px1 = Mb_1[0]
     px2 = Mb_1[1]
     
-    Cgrad_x1 = Grid_L[px1]
-    Cgrad_x2 = Grid_L[px2]
+    # Cgrad_x1 = Grid_L[px1]
+    # Cgrad_x2 = Grid_L[px2]
     
     nbm_x1 = nbmailles_x[px1]
     
@@ -69,23 +68,31 @@ def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_pe
     P = v_perm
     
     # gradient osmotique  : a verifier pour CG/dx)
-    CG = Cgrad_x1[nbm_x1 - 1]
-    CD = Cgrad_x2[0]
+    CG = Grid_L[px1][nbm_x1 - 1]
+    CD = Grid_L[px2][0]
 
-    grad_osmo = ((CG / delta_x1) - (CD / delta_x2))
+    # # gradient osmotique  : a verifier pour CG/dx)
+    # CG = Cgrad_x1[nbm_x1 - 1]
+    # CD = Cgrad_x2[0]
+
+    grad_osmo = (CG - CD)
     flux_osmo = P * grad_osmo
     
-                   
     # exchange at the membrane : osmotique echange 
     # Euler application
-    Grid_1 = Grid_L[px1]
-    Grid_2 = Grid_L[px2]
+    # Grid_1 = Grid_L[px1]
+    # Grid_2 = Grid_L[px2]
     
-    Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - flux_osmo*delta_t
-    Grid_2[0] = Grid_2[0] + flux_osmo*delta_t
+    Grid_L[px1][nbm_x1-1] = Grid_L[px1][nbm_x1-1] - (flux_osmo/delta_x2)*delta_t # prise en compte du delta_x
+    Grid_L[px2][0] = Grid_L[px2][0] + (flux_osmo/delta_x1)*delta_t
     
-    Grid_L[px1] = Grid_1
-    Grid_L[px2] = Grid_2
+    
+    
+    # Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - (flux_osmo/delta_x1)*delta_t # prise en compte du delta_x
+    # Grid_2[0] = Grid_2[0] + (flux_osmo/delta_x2)*delta_t
+    
+    # Grid_L[px1] = Grid_1
+    # Grid_L[px2] = Grid_2
     return (Grid_L)
 
 '''flux osmotique, analytique'''

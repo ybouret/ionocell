@@ -124,7 +124,7 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, nbmailles_x, t_init, t_fin
         times.append(t)
         t += delta_t # passe au temps suivant (a la maille de temps d'apres)   
 
-        print(t)
+        # print(t)
     CS_dt.append(Grid_CI_L)
     return (CS_dt, integrals_Grid_L, times)
 
@@ -331,9 +331,9 @@ def iteration(list_Csp, Grid_to_analyse_L, nbmailles_x, delta_t, delta_x, TFreac
 '''parametres modifiables'''
 
 # 2**5, round(100*(4/9))
-nbmailles_x1 = round(100*(4/9))
-nbmailles_x2 = round(100*(1/9))
-nbmailles_x3 = round(100*(4/9))
+nbmailles_x1 = 2**5
+nbmailles_x2 = 2**5
+nbmailles_x3 = 2**5
 nbmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
 # nbmailles_x = [nbmailles_x1, nbmailles_x2]
 
@@ -463,7 +463,7 @@ IC_dict = {
 # Gradient = Calcul_gradient_avant[2]
 
 Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
-Type_mb = Membrane_list[1]
+Type_mb = Membrane_list[0]
 
 Params_calcul = [Type_mb]
 
@@ -729,6 +729,16 @@ ppl.show()
 
 
 '''Plot au dernier temps'''
+
+
+# Res = []
+# for i in range(0, len(Final_Grid_L[0])):
+#     modif_Final_Grid_L = []
+#     for i1 in range(0, len(Final_Grid_L)):
+#         modif_Final_Grid_L.append(Final_Grid_L[i1][i])
+#     Res.append(modif_Final_Grid_L)
+
+
 ppl.figure()
 sp_name=[]
 
@@ -741,7 +751,7 @@ for space in range (0, len(spacesL)):
         # pour t = 0 
         label = SPECIES[species].name if space == 0 else None
         
-        ppl.plot(x_values, to_plot[-1][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
+        ppl.plot(x_values, to_plot[len(times)-1][species], color = 'black', marker=SPECIES[species].marker, markersize=4, label=label)
 # griser les membranes : 
 
 for Mb in Mb_dict:
@@ -759,6 +769,7 @@ ppl.ylabel("Concentration finale")
 ppl.legend(loc='upper right')
 ppl.grid()
 
+# ppl.savefig("IS_euler_t01.pdf")
 
 ppl.show()
 
@@ -799,7 +810,7 @@ ppl.show()
 
 # images = Make_video.generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES, thickness, change_log_time, nb_frames=150)
 
-# Make_video.create_video_from_images(images, "IS_small_middle_space_t1_diff_nbmailles_Ptrue.mp4", fps=8)
+# Make_video.create_video_from_images(images, "IS_euler_same_nbmailles_dtx1.mp4", fps=8)
 
 
 
