@@ -124,7 +124,7 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, nbmailles_x, t_init, t_fin
         times.append(t)
         t += delta_t # passe au temps suivant (a la maille de temps d'apres)   
 
-        # print(t)
+        print(t)
     CS_dt.append(Grid_CI_L)
     return (CS_dt, integrals_Grid_L, times)
 
@@ -328,21 +328,41 @@ def iteration(list_Csp, Grid_to_analyse_L, nbmailles_x, delta_t, delta_x, TFreac
 
 """ Definition des paramètres """
 
+'''Def membrane'''
+
+# nombre d'espace pour la simulation 
+space_nb = 2
+
+# consequences: 
+allMb_dict = {
+    "Mb1" : [0,1],
+    "Mb2" : [1,2]}
+
+# type de membrane
+Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
+Type_mb = Membrane_list[1]
+
+Params_calcul = [Type_mb, space_nb]
+
+
 '''parametres modifiables'''
 
 # 2**5, round(100*(4/9))
-nbmailles_x1 = 2**5
-nbmailles_x2 = 2**5
-nbmailles_x3 = 2**5
-nbmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
+nbmailles_x1 = round(100*(4/9))
+nbmailles_x2 = round(100*(1/9))
+nbmailles_x3 = round(100*(4/9))
+
+allmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
 # nbmailles_x = [nbmailles_x1, nbmailles_x2]
+# nbmailles_x = [nbmailles_x1]
 
 # ratio x1 vs x2: taille dans la cuve
 Respace1 = 4/9
 Respace2 = 1/9
 Respace3 = 4/9
-Respace = [Respace1, Respace2, Respace3]
+all_Respace = [Respace1, Respace2, Respace3]
 # Respace = [Respace1, Respace2]
+# Respace = [Respace1]
 
 # TEMPS: de 0 à 1
 ti = 0
@@ -361,31 +381,53 @@ var_g = 0.005 # largeur de la gaussienne
 delta_x1 = Respace1/(nbmailles_x1-1)
 delta_x2 = Respace2/(nbmailles_x2-1)
 delta_x3 = Respace3/(nbmailles_x3-1)
-delta_x = [delta_x1, delta_x2, delta_x3]
+alldelta_x = [delta_x1, delta_x2, delta_x3]
 # delta_x = [delta_x1, delta_x2]
+# delta_x = [delta_x1]
 
 # espace
 x1 = np.arange(nbmailles_x1)* delta_x1
 x2 = np.arange(nbmailles_x2)* delta_x2 
 x3 = np.arange(nbmailles_x3)* delta_x3
+allspacesL = [x1, x2, x3]
 # spacesL = [x1, x2]
-spacesL = [x1, x2, x3]
+# spacesL = [x1]
 
-# PAS DE TEMPS
+# PAS DE TEMPS A MODIFIER : AJOUTER D POUR CHAQUE ESPECE
 delta_t1 = 0.9 * (delta_x1**2) / 2 # 0.9 * delta_t max 
 delta_t2 = 0.9 * (delta_x2**2) / 2 # 0.9 * delta_t max 
 delta_t3 = 0.9 * (delta_x3**2) / 2 # 0.9 * delta_t max 
-delta_t = min(delta_t1,delta_t2, delta_t3) # recuperer le delta_t min = celui avec le plus de precisions
+alldelta_t = [delta_t1,delta_t2, delta_t3] # recuperer le delta_t min = celui avec le plus de precisions
 # delta_t = min(delta_t1,delta_t2)
+# delta_t = delta_t1
 
 thickness = min(delta_x1, delta_x2, delta_x3)/2 #largeur de la membrane pour le plot
+# thickness = delta_x1/2 #largeur de la membrane pour le plot
+
+x1_info = ionocell.Space(_number = 0, _type = "Cell", _two_wall = False, _one_inje = True ) 
+x2_info = ionocell.Space(_number = 1, _type = "Extra", _two_wall = True, _one_inje = False ) 
+x3_info =  ionocell.Space(_number = 2, _type = "Cell", _two_wall = True, _one_inje = False ) 
+
+
+allInfo_space = [x1_info, x2_info, x3_info]
+
+'''nombre d'espace'''
+
+spacesL = allspacesL[:space_nb]
+nbmailles_x = allmailles_x[:space_nb]
+delta_t = min(alldelta_t[:space_nb])
+delta_x = alldelta_x[:space_nb]
+Info_space = allInfo_space[:space_nb]
+Respace = all_Respace[:space_nb]
+
+Mb_dict = dict(list(allMb_dict.items())[:space_nb-1])
 
 '''description d'especes'''
 
 # test avec Class
 
 Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 'o')
-Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= 's')
+Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 's')
 NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 1, _perm_coeff = 10, _charge = 0, _marker= 'd')
 OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 'd')
 H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's')
@@ -394,7 +436,7 @@ H20 = ionocell.Specie(_specie_name = "H2O", _diff_coeff = 1, _perm_coeff = 1, _c
 # liste des especes utilisées poru la simulation (decrites: "Na", "Cl", "OH", "NaCl")
 # si pas decrite: rajouter les caracteristiques dans les dict + les CI
 # SEULE LISTE A MODIFIER POUR AJOUTER/ENLEVER DES ESPECES POUR UNE SIMULATION
-SPECIES = [Na] 
+SPECIES = [Cl] 
 
 Marker = ["o", "d", "s", "h", "v"]
 
@@ -411,12 +453,6 @@ TFreaction = False
 d_react = {}
 
 
-x1_info = ionocell.Space(_number = 0, _type = "Cell", _two_wall = False, _one_inje = True ) 
-x2_info = ionocell.Space(_number = 1, _type = "Extra", _two_wall = True, _one_inje = False ) 
-x3_info =  ionocell.Space(_number = 2, _type = "Cell", _two_wall = True, _one_inje = False ) 
-
-
-Info_space = [x1_info, x2_info, x3_info]
 
 
 '''Condition initiale des elements'''
@@ -459,18 +495,20 @@ IC_dict = {
 
 '''Params model pour calcul'''
 
-# Calcul_gradient_avant = ["reaction", "diffusion", "transport"]
-# Gradient = Calcul_gradient_avant[2]
+# # Calcul_gradient_avant = ["reaction", "diffusion", "transport"]
+# # Gradient = Calcul_gradient_avant[2]
 
-Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
-Type_mb = Membrane_list[0]
+# Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
+# Type_mb = Membrane_list[1]
 
-Params_calcul = [Type_mb]
+# Params_calcul = [Type_mb]
 
 
-Mb_dict = {
-    "Mb1" : [0,1],
-    "Mb2" : [1,2]}
+# # Mb_dict = {"Mb1" : [0,1]}
+
+# Mb_dict = {
+#     "Mb1" : [0,1],
+#     "Mb2" : [1,2]}
 
 
 """ Calculs """
@@ -806,11 +844,11 @@ ppl.show()
 
 """Video variation du temps params classique"""
 
-# change_log_time = False
+change_log_time = False
 
-# images = Make_video.generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES, thickness, change_log_time, nb_frames=150)
+images = Make_video.generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES, thickness, change_log_time, nb_frames=200)
 
-# Make_video.create_video_from_images(images, "IS_euler_same_nbmailles_dtx1.mp4", fps=8)
+# Make_video.create_video_from_images(images, "Results/video/IS_osmo_t5_P10.mp4", fps=8)
 
 
 
