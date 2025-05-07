@@ -7,18 +7,14 @@ Created on Mon Apr 14 14:48:13 2025
 """
 import numpy as np
 
-'''TRASNPORT A TRAVERS LA MEMBRANE GRADIENT OSMOTIQUE'''
+'''flux osmotique, explicite'''
 
-'''flux osmotique, implicite'''
-
-def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm):
+def transport_mb_osmo(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm):
     """
-    Étape de transport à travers la membrane via un gradient osmotique, de 1 vers 2
+    Étape de transport à travers la membrane via un gradient osmotique
 
     Entrées :
     ----------
-    - list_SP : list
-        Liste des espèces étudiées, en Class: SPECIE
     - specie : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Cgrad_x1, Cgrad_x1 : array
@@ -57,9 +53,6 @@ def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_pe
     px1 = Mb_1[0]
     px2 = Mb_1[1]
     
-    # Cgrad_x1 = Grid_L[px1]
-    # Cgrad_x2 = Grid_L[px2]
-    
     nbm_x1 = nbmailles_x[px1]
     
     delta_x1 = delta_x[px1]
@@ -67,44 +60,26 @@ def transport_mb_osmo(list_SP, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_pe
     
     P = v_perm
     
-    # gradient osmotique  : a verifier pour CG/dx)
-    CG = Grid_L[px1][nbm_x1 - 1]
-    CD = Grid_L[px2][0]
-
-    # # gradient osmotique  : a verifier pour CG/dx)
-    # CG = Cgrad_x1[nbm_x1 - 1]
-    # CD = Cgrad_x2[0]
+    # gradient osmotique  
+    CG = Grid_L[px1][nbm_x1 - 1] # gauche de la membrane
+    CD = Grid_L[px2][0] # droite de la membrane
 
     grad_osmo = (CG - CD)
     flux_osmo = P * grad_osmo
     
-    # exchange at the membrane : osmotique echange 
-    # Euler application
-    # Grid_1 = Grid_L[px1]
-    # Grid_2 = Grid_L[px2]
-    
     Grid_L[px1][nbm_x1-1] = Grid_L[px1][nbm_x1-1] - (flux_osmo/delta_x2)*delta_t # prise en compte du delta_x
     Grid_L[px2][0] = Grid_L[px2][0] + (flux_osmo/delta_x1)*delta_t
     
-    
-    
-    # Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - (flux_osmo/delta_x1)*delta_t # prise en compte du delta_x
-    # Grid_2[0] = Grid_2[0] + (flux_osmo/delta_x2)*delta_t
-    
-    # Grid_L[px1] = Grid_1
-    # Grid_L[px2] = Grid_2
     return (Grid_L)
 
 '''flux osmotique, analytique'''
 
-def transport_mb_osmo_analyt(list_SP, Grid_L, Mb_1, nbmailles_x, v_perm, delta_t, delta_x):
+def transport_mb_osmo_analyt(Grid_L, Mb_1, nbmailles_x, v_perm, delta_t, delta_x):
     """
-    Étape de transport à travers la membrane via un gradient osmotique: 1 vers 2
-
+    Étape de transport à travers la membrane via un gradient osmotique
+    
     Entrées :
     ----------
-    - list_SP : list
-        Liste des espèces étudiéesm en Class: Specie
     - specie : int
         Index de l'espèce étudiée dans la liste SPECIES
    - Grid_1, Grid_2 : array
@@ -263,8 +238,8 @@ def transport_mb_electro_osmo_impl(SPECIES, Grid_L, Mb_1, nbmailles_x, delta_t, 
     
     nbm_x1 = nbmailles_x[px1]
     
-    deltax1 = delta_x[px1]
-    deltax2 = delta_x[px2]
+    # deltax1 = delta_x[px1]
+    # deltax2 = delta_x[px2]
     
     # print("x1 = interieur, x2 = exterieur")
     P = v_perm

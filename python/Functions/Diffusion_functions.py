@@ -6,18 +6,12 @@ Created on Mon Apr 14 14:49:52 2025
 @author: jleclezio
 """
 
-import numpy as np
-
-'''DIFFUSION'''
-
-def diffusion_two_wall(list_SP, specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
+def diffusion_two_wall(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
     Étape de diffusion des espèces à travers l'espace pour un pas de temps.
 
     Entrées :
     ----------
-    - list_SP : list
-        Liste des espèces étudiées, en Class : Specie
     - species : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Grid_to_diff_x1, Grid_to_diff_x2 : arrays
@@ -73,14 +67,12 @@ def diffusion_two_wall(list_SP, specie, Grid_to_diff, nbmailles_x, delta_t, delt
     return (Grid_diff)
 
 
-def diffusion_one_wall_one_inject(list_SP, specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
+def diffusion_one_wall_one_inject(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
     Étape de diffusion des espèces à travers l'espace pour un pas de temps.
 
     Entrées :
     ----------
-    - list_SP : list
-        Liste des espèces étudiées, en Class : Specie
     - species : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Grid_to_diff_x1, Grid_to_diff_x2 : arrays
@@ -135,14 +127,12 @@ def diffusion_one_wall_one_inject(list_SP, specie, Grid_to_diff, nbmailles_x, de
     
     return (Grid_diff)
 
-def diffusion_one_wall_one_supp(list_SP, specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
+def diffusion_one_wall_one_supp(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
     Étape de diffusion des espèces à travers l'espace pour un pas de temps.
 
     Entrées :
     ----------
-    - list_SP : list
-        Liste des espèces étudiées, en Class : Specie
     - species : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Grid_to_diff_x1, Grid_to_diff_x2 : arrays
