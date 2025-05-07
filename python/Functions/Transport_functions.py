@@ -139,7 +139,7 @@ def transport_mb_osmo_analyt(list_SP, Grid_L, Mb_1, nbmailles_x, v_perm, delta_t
     """
     px1 = Mb_1[0]
     px2 = Mb_1[1]
-    
+
     Cgrad_x1 = Grid_L[px1]
     Cgrad_x2 = Grid_L[px2]
     
