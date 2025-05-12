@@ -13,12 +13,18 @@ from moviepy import ImageSequenceClip
 
 
 def generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES, thickness, c_log, nb_frames=50):
-    
-    if c_log == None: 
-        log_indices = np.logspace(0, np.log10(len(times)-1), nb_frames, dtype=int) 
+
+    if c_log == "Log": 
+        # log_indices = np.logspace(0, np.log10(len(times)-1), nb_frames, dtype=int) 
+        
+        log_indices = np.logspace(0, np.log10(len(times)-1), nb_frames, base=10)
+        log_indices = np.unique(np.floor(log_indices).astype(int))
+        log_indices = np.concatenate(([0], log_indices[log_indices > 0]))
+        # print(log_indices)
+        
         times_courbelog = np.array(times)[log_indices.astype(int)]
         
-    elif c_log == False:
+    elif c_log == "Equal":
         
         indices = np.linspace(0, len(times) - 1, nb_frames, dtype=int)
         times_courbelog = np.array(times)[indices]
@@ -71,7 +77,7 @@ def generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_dict, SPECIES,
 
         # Membranes
         for Mb in Mb_dict:
-            i = Mb_dict[Mb][0]
+            i = Mb[1][0]
             x1 = real_Rspace[i]
             x2 = x1 + thickness
             ax.axvspan(x1, x2, color='grey', alpha=0.5)
