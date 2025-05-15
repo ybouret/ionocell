@@ -181,15 +181,13 @@ def PSI_fct(u):
 
     return (res)
 
-def transport_mb_electro_osmo_impl(SPECIES, Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge):
+def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge):
     # delta x a implementer 
     """
     Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014 : 1 vers 2 
     
     Entrées :
     ----------
-    - SPECIES : list
-        Liste des noms des espèces étudiées
     - specie : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Cgrad_x1, Cgrad_x2 : array

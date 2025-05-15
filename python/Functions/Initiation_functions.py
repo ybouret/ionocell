@@ -5,23 +5,20 @@ Created on Fri May  9 10:38:56 2025
 
 @author: jleclezio
 """
-
 import numpy as np
+import sys
 
-# from Functions import Reaction_functions
-from . import Reaction_functions
-# from Functions import Diffusion_functions
-# from Functions import Transport_functions
-# from Functions import Make_video
+sys.path.insert(0, '/Users/jleclezio/Documents/ionocell/python/Functions/')
 
-# import ionocell
+from Reaction_functions import reaction_euler
+from Diffusion_functions import diffusion_two_wall, diffusion_one_wall_one_inject, diffusion_one_wall_one_supp
+from Transport_functions import transport_mb_osmo, transport_mb_osmo_analyt, transport_mb_electro_osmo_impl
 
-""" Definitions des fonctions """
-
-'''CALCUL'''
+'''CALCUL''' 
 
 def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, delta_t, delta_x, TFreaction, Mb_dict, Space_info):
     """
+    discretisation dans le temps
     Simule l'évolution des concentrations chimiques dans un espace 2D, 
     en prenant en compte les reactions possibles, la diffusion d'especes et le transport à travers une membrane
 
@@ -160,6 +157,7 @@ def condition_initiale(list_Csp, dict_CI, list_space):
 
 def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreaction, react_dict, Mb_dict, Space_info, t):
     """
+    discretisation dans l'espace
     Calcule les concentrations dans l'espace pour le pas de temps suivant.
 
     Entrées :
@@ -220,7 +218,7 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
         Grid_to_analyse = Grid_to_analyse_L[space1]
 
         if TFreaction:
-            (Greact_space) = Reaction_functions.reaction_euler(list_Csp, Grid_to_analyse , react_dict)
+            (Greact_space) = reaction_euler(list_Csp, Grid_to_analyse , react_dict)
             
         else : # if no reaction described
             Greact_space = Grid_to_analyse
@@ -241,13 +239,13 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
             coeffdiff_sp = list_Csp[num_sp1].diff
             
             if Space_info[space2].walls :
-                (Gdiff_sp) = Diffusion_functions.diffusion_two_wall(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+                (Gdiff_sp) = diffusion_two_wall(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
             
             elif Space_info[space2].inje :
                 if t < 0.5 : 
-                    (Gdiff_sp) = Diffusion_functions.diffusion_one_wall_one_inject(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+                    (Gdiff_sp) = diffusion_one_wall_one_inject(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
                 else : 
-                    (Gdiff_sp) = Diffusion_functions.diffusion_one_wall_one_supp(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
+                    (Gdiff_sp) = diffusion_one_wall_one_supp(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
             
         Grid_diff = Gdiff_sp
 
@@ -276,20 +274,17 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
             pos_Mb = dict_pos_mb[Mb]
             
             if Type_mb == "osmotique implicite":
-                (Grid_to_transp_sp) = Transport_functions.transport_mb_osmo(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp)
-                
-                # (Grid_to_transp_sp) = Transport_functions.transport_mb_osmo(list_Csp, Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp)
+                (Grid_to_transp_sp) = transport_mb_osmo(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp)
                 
             elif Type_mb == "osmotique analytique":
-                (Grid_to_transp_sp) = Transport_functions.transport_mb_osmo_analyt(Grid_to_transp_sp, pos_Mb, mesh_len, perm_sp, delta_t, delta_x)
+                (Grid_to_transp_sp) = transport_mb_osmo_analyt(Grid_to_transp_sp, pos_Mb, mesh_len, perm_sp, delta_t, delta_x)
 
             elif Type_mb == "electro-osmotique implicite":
                 # a verifier
-                (Grid_to_transp_sp) = Transport_functions.transport_mb_electro_osmo_impl(list_Csp, Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
+                (Grid_to_transp_sp) = transport_mb_electro_osmo_impl(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
     
             elif Type_mb == "non permeable":
-                # en cours
-                (Grid_to_transp_sp) = (Grid_to_transp_sp)
+                (Grid_to_transp_sp) = (Grid_to_transp_sp) # non permeable = pas de transport
     
             # elif Type_mb == "electro-osmotique analytique":
                 # en cours
