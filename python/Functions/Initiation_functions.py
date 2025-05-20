@@ -12,9 +12,9 @@ sys.path.insert(0, '/Users/jleclezio/Documents/ionocell/python/Functions/')
 
 from Reaction_functions import reaction_euler
 from Diffusion_functions import diffusion_two_wall, diffusion_one_wall_one_inject, diffusion_one_wall_one_supp
-from Transport_functions import transport_mb_osmo, transport_mb_osmo_analyt, transport_mb_electro_osmo_impl
+from Transport_functions import non_transport, transport_mb_osmo, transport_mb_osmo_analyt, transport_mb_electro_osmo_impl
 
-'''CALCUL''' 
+"""Calcul"""
 
 def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, delta_t, delta_x, TFreaction, Mb_dict, Space_info):
     """
@@ -257,41 +257,23 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
     dict_pos_mb = dict(list(Mb_dict.items())[:-1])
     
     Gtranp_L = []
-    
     modif_c = []
     for num_sp2 in range(0, NS):
         
         perm_sp = list_Csp[num_sp2].perm
         charge_sp = list_Csp[num_sp2].charge
         
-        # Grid_to_transp_sp = np.copy(Gdiff_L[:,num_sp2,:])
-        # Grid_to_transp_sp = Gdiff_L[num_sp2].copy()
-        # Grid_to_transp_sp = Gdiff_L[:,num_sp2,:]
-        
         Grid_to_transp_sp = [arr[num_sp2, :] for arr in Gdiff_L]
                 
         for Mb in dict_pos_mb:
             pos_Mb = dict_pos_mb[Mb]
             
-            if Type_mb == "osmotique implicite":
-                (Grid_to_transp_sp) = transport_mb_osmo(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp)
-                
-            elif Type_mb == "osmotique analytique":
-                (Grid_to_transp_sp) = transport_mb_osmo_analyt(Grid_to_transp_sp, pos_Mb, mesh_len, perm_sp, delta_t, delta_x)
+            type_mb = {
+                "osmotique implicite" : transport_mb_osmo ,
+                "osmotique analytique": transport_mb_osmo_analyt ,
+                "electro-osmotique implicite" : transport_mb_electro_osmo_impl }
 
-            elif Type_mb == "electro-osmotique implicite":
-                # a verifier
-                (Grid_to_transp_sp) = transport_mb_electro_osmo_impl(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
-    
-            elif Type_mb == "non permeable":
-                (Grid_to_transp_sp) = (Grid_to_transp_sp) # non permeable = pas de transport
-    
-            # elif Type_mb == "electro-osmotique analytique":
-                # en cours
-                
-            else :
-                print("no transport defined")
-                sys.exit(1)
+            type_mb.get(Type_mb, non_transport)(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
         
         modif_c.append(Grid_to_transp_sp)
         
@@ -303,7 +285,6 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
         Gtranp_L.append(modif_c_space)
     
     Grid_final = Gtranp_L
-    # Gtranp_L = np.stack(modif_c, axis=1)
         
     return (Grid_final)
 
