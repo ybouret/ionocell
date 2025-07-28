@@ -106,6 +106,7 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, d
         t += delta_t # passe au temps suivant (a la maille de temps d'apres)   
 
         print(t)
+        
     CS_dt.append(Grid_CI_L)
     return (CS_dt, integrals_Grid_L, times)
 
@@ -208,26 +209,27 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
     NS = len(list_Csp)
     
     Type_mb = Mb_dict["Type"]
+    thickness_mb =  Mb_dict["thickness"]
     
     # step analyse : 1. reaction 2. diffusion 3. transport
     Greact_L = []
-    
     
     # REACTION
     for space1 in range (0, len(Grid_to_analyse_L)):
         Grid_to_analyse = Grid_to_analyse_L[space1]
 
-        if TFreaction:
+        if TFreaction== True:
             (Greact_space) = reaction_euler(list_Csp, Grid_to_analyse , react_dict)
-            
+
         else : # if no reaction described
             Greact_space = Grid_to_analyse
+            
         Greact_L.append(Greact_space)
-
+    
     Gdiff_L = []
     # DIFFUSION
     for space2 in range (0, len(Greact_L)):
-        
+
         Grid_to_diff = Greact_L[space2]
 
         nbmaille_space = mesh_len[space2]
@@ -240,7 +242,7 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
             
             if Space_info[space2].walls :
                 (Gdiff_sp) = diffusion_two_wall(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
-            
+
             elif Space_info[space2].inje :
                 if t < 0.5 : 
                     (Gdiff_sp) = diffusion_one_wall_one_inject(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
@@ -250,11 +252,11 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
         Grid_diff = Gdiff_sp
 
         Gdiff_L.append(np.array(Grid_diff))
-        
+    
     # TRANSPORT à la membrane
     
     #position mb : 
-    dict_pos_mb = dict(list(Mb_dict.items())[:-1])
+    dict_pos_mb = dict(list(Mb_dict.items())[:-2])
     
     Gtranp_L = []
     modif_c = []
@@ -267,13 +269,12 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
                 
         for Mb in dict_pos_mb:
             pos_Mb = dict_pos_mb[Mb]
-            
+
             type_mb = {
                 "osmotique implicite" : transport_mb_osmo ,
                 "osmotique analytique": transport_mb_osmo_analyt ,
                 "electro-osmotique implicite" : transport_mb_electro_osmo_impl }
-
-            type_mb.get(Type_mb, non_transport)(Grid_to_transp_sp, pos_Mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
+            type_mb.get(Type_mb, non_transport)(Grid_to_transp_sp, pos_Mb, thickness_mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
         
         modif_c.append(Grid_to_transp_sp)
         
@@ -285,6 +286,6 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
         Gtranp_L.append(modif_c_space)
     
     Grid_final = Gtranp_L
-        
+    
     return (Grid_final)
 
