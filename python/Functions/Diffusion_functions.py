@@ -53,16 +53,19 @@ def diffusion_two_wall(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_co
     alpha = (D * delta_t) / delta_x**2 
         
     nbm = nbmailles_x
+    
+    Gfin = Grid_to_diff.copy()
+    Gfin_sp = Gfin[specie]
 
     # diffusion inside
-    for i in range(1, nbm-1): # 1 à 30 
-        Grid_to_diff[specie][i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
+    for i in range(1, nbm-1): # do not take into account the boundary
+        Gfin_sp[i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
 
     # no flux: boundary
-    Grid_to_diff[specie][0] = (4*Grid_to_diff[specie][1] - Grid_to_diff[specie][2])/3  # à x = 0 
-    Grid_to_diff[specie][nbm-1] = (4*Grid_to_diff[specie][nbm-2] - Grid_to_diff[specie][nbm-3])/3 # à x = 1
+    Gfin_sp[0] = (4*Grid_to_diff[specie][1] - Grid_to_diff[specie][2])/3  # à x = 0 
+    Gfin_sp[nbm-1] = (4*Grid_to_diff[specie][nbm-2] - Grid_to_diff[specie][nbm-3])/3 # à x = 1
 
-    Grid_diff = Grid_to_diff
+    Grid_diff = Gfin
     
     return (Grid_diff)
 
@@ -116,7 +119,7 @@ def diffusion_one_wall_one_inject(specie, Grid_to_diff, nbmailles_x, delta_t, de
     nbm = nbmailles_x
 
     # diffusion inside
-    for i in range(1, nbm-1): # 1 à 30 
+    for i in range(1, nbm-1): # do not take into account the boundary
         Grid_to_diff[specie][i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
 
     # no flux: boundary
@@ -176,7 +179,7 @@ def diffusion_one_wall_one_supp(specie, Grid_to_diff, nbmailles_x, delta_t, delt
     nbm = nbmailles_x
 
     # diffusion inside
-    for i in range(1, nbm-1): # 1 à 30 
+    for i in range(1, nbm-1): # do not take into account the boundary
         Grid_to_diff[specie][i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
 
     # no flux: boundary
