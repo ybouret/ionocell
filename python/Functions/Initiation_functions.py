@@ -7,16 +7,17 @@ Created on Fri May  9 10:38:56 2025
 """
 import numpy as np
 import sys
+import copy
 
 sys.path.insert(0, '/Users/jleclezio/Documents/ionocell/python/Functions/')
 
 from Reaction_functions import reaction_euler
 from Diffusion_functions import diffusion_two_wall, diffusion_one_wall_one_inject, diffusion_one_wall_one_supp
-from Transport_functions import non_transport, transport_mb_osmo, transport_mb_osmo_analyt, transport_mb_electro_osmo_impl
+from Transport_functions import non_transport, transport_mb_osmo, transport_mb_osmo_analyt, transport_mb_electro_osmo_impl, transport_mb_electro_osmo_NaK, flux_electro_osmo_sp
 
 """Calcul"""
 
-def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, delta_t, delta_x, TFreaction, Mb_dict, Space_info):
+def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, delta_t, delta_x, TFreaction, Mb_dict, Space_info, L_transp, dict_transporter):
     """
     discretisation dans le temps
     Simule l'évolution des concentrations chimiques dans un espace 2D, 
@@ -79,7 +80,7 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, d
     t = t_init
     times = [] 
     
-    print("La membrane modelisée est ", Mb_dict["Type"])
+    print("La membrane modelisée comprend ces transporteurs : ", L_transp)
     
     integrals_Grid_L = [] # analyse conservation
     
@@ -90,8 +91,7 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, d
         
         CS_dt.append(GridFinal_L)
         
-        (GridFinal_L) = iteration(list_Csp, GridFinal_L, mesh_len, delta_t, delta_x, TFreaction, react_dict, Mb_dict, Space_info, t)
-                
+        GridFinal_L = iteration(list_Csp, GridFinal_L, mesh_len, delta_t, delta_x, TFreaction, react_dict, Mb_dict, Space_info, t, L_transp, dict_transporter)
         
         # calcul des intégrales: methodes des trapezes
         integral_Grid_L = []
@@ -102,10 +102,12 @@ def calcul(list_Csp, list_space, dict_CI, react_dict, mesh_len, t_init, t_fin, d
         integrals_Grid_L.append(integral_Grid_L)
         
         
+        if f"{t:.2f}" != f"{t+delta_t:.2f}":
+            print(f"{t+delta_t:.2f}")
+            
         times.append(t)
         t += delta_t # passe au temps suivant (a la maille de temps d'apres)   
 
-        print(t)
         
     CS_dt.append(Grid_CI_L)
     return (CS_dt, integrals_Grid_L, times)
@@ -143,11 +145,12 @@ def condition_initiale(list_Csp, dict_CI, list_space):
     CI_L = []
     for i in range (1, len(list_space)+1):
         CI_specie = []
+
         for specie in list_Csp:
             name_sp = specie.name[0]
             
             Val_CI = dict_CI[f"{name_sp}_x{i}"]
-            
+
             CI_specie.append(Val_CI)
         CI_L.append(CI_specie)
 
@@ -156,7 +159,7 @@ def condition_initiale(list_Csp, dict_CI, list_space):
 
 '''ITERATION'''
 
-def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreaction, react_dict, Mb_dict, Space_info, t):
+def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreaction, react_dict, Mb_dict, Space_info, t, L_transp, dict_transporter):
     """
     discretisation dans l'espace
     Calcule les concentrations dans l'espace pour le pas de temps suivant.
@@ -208,9 +211,6 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
     
     NS = len(list_Csp)
     
-    Type_mb = Mb_dict["Type"]
-    thickness_mb =  Mb_dict["thickness"]
-    
     # step analyse : 1. reaction 2. diffusion 3. transport
     Greact_L = []
     
@@ -234,7 +234,7 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
 
         nbmaille_space = mesh_len[space2]
         delta_x_space = delta_x[space2]
-        
+
         Grid_diff = []
         for num_sp1 in range(0, NS):
             
@@ -248,7 +248,9 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
                     (Gdiff_sp) = diffusion_one_wall_one_inject(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
                 else : 
                     (Gdiff_sp) = diffusion_one_wall_one_supp(num_sp1, Grid_to_diff, nbmaille_space, delta_t, delta_x_space, coeffdiff_sp)
-            
+            else:
+                Gdiff_sp = Grid_to_diff
+                
         Grid_diff = Gdiff_sp
 
         Gdiff_L.append(np.array(Grid_diff))
@@ -256,28 +258,68 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
     # TRANSPORT à la membrane
     
     #position mb : 
-    dict_pos_mb = dict(list(Mb_dict.items())[:-2])
-    
+    pos_Mb_L=[]
+    for i in range (1, Mb_dict["nb_mb"]+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+        
+    Em = Mb_dict["potential"]
+
     Gtranp_L = []
     modif_c = []
-    for num_sp2 in range(0, NS):
+    
+    Grid_transp_sp = copy.deepcopy(Gdiff_L)
+    
+    for nb_membrane in range(0,Mb_dict["nb_mb"]) :
+        pos_Mb = pos_Mb_L[nb_membrane]
         
-        perm_sp = list_Csp[num_sp2].perm
-        charge_sp = list_Csp[num_sp2].charge
+        deltax1 = mesh_len[pos_Mb[0]]
+        deltax2 = mesh_len[pos_Mb[1]]
         
-        Grid_to_transp_sp = [arr[num_sp2, :] for arr in Gdiff_L]
-                
-        for Mb in dict_pos_mb:
-            pos_Mb = dict_pos_mb[Mb]
+        
+        c_int_L = [row[-1] for row in Gdiff_L[pos_Mb[0]]] 
+        c_ext_L = [row[0] for row in Gdiff_L[pos_Mb[1]]] 
+    
+        c_int_L_n = c_int_L.copy()
+        c_ext_L_n = c_ext_L.copy()
+        
+        Flux_elec = {}
 
-            type_mb = {
-                "osmotique implicite" : transport_mb_osmo ,
-                "osmotique analytique": transport_mb_osmo_analyt ,
-                "electro-osmotique implicite" : transport_mb_electro_osmo_impl }
-            type_mb.get(Type_mb, non_transport)(Grid_to_transp_sp, pos_Mb, thickness_mb, mesh_len, delta_t, delta_x, perm_sp, charge_sp)
-        
-        modif_c.append(Grid_to_transp_sp)
-        
+        for nb_sp, species in enumerate(list_Csp):  # for each species
+            
+            name_sp = species.name[0]
+            
+            C_int = c_int_L[nb_sp]
+            C_ext = c_ext_L[nb_sp]
+            
+            # electro osmotic flux
+            J_elect_sp = flux_electro_osmo_sp(species, C_int, C_ext, pos_Mb, Em, mesh_len, delta_t, delta_x)
+
+            Flux_elec[name_sp] = J_elect_sp
+
+            # transporter
+            # if sp in multiple transporter : not working
+            for transp in L_transp:
+                
+                if name_sp in dict_transporter[transp]:
+                    
+                    flux_transp = dict_transporter[transp][name_sp] * dict_transporter[transp]["Rho"]
+                    
+            flux_sp_tot = J_elect_sp + flux_transp
+                    
+            # value after transport for border :        
+            C_int_n = C_int - (flux_sp_tot*delta_t)/deltax1 
+            C_ext_n = C_ext + (flux_sp_tot*delta_t)/deltax2
+             
+            c_int_L_n[nb_sp] = C_int_n
+            c_ext_L_n[nb_sp] = C_ext_n      
+                   
+        for i, (val_int, val_ext) in enumerate(zip(c_int_L_n, c_ext_L_n)):
+            Grid_transp_sp[pos_Mb[0]][i][-1] = val_int
+            Grid_transp_sp[pos_Mb[1]][i][0] = val_ext
+
+    modif_c = Grid_transp_sp
+   
     # re shape en gardant les liste : 
     for i in range(0, len(modif_c[0])):
         modif_c_space = []
@@ -286,6 +328,7 @@ def iteration(list_Csp, Grid_to_analyse_L, mesh_len, delta_t, delta_x, TFreactio
         Gtranp_L.append(modif_c_space)
     
     Grid_final = Gtranp_L
+    
     
     return (Grid_final)
 
