@@ -9,8 +9,20 @@ import numpy as np
 import matplotlib.pyplot as ppl
 
 
-def plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos, thickness):
+def plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_dict):
     
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    # mb_type = Mb_dict["Type"]
+    thickness = Mb_dict["thickness"]
+    
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+   
+    
+    # simu params
     colors = params_plot["colors"]
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
@@ -27,15 +39,13 @@ def plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_
             modif_Final_Grid_L.append(Final_Grid_L[i1][i])
         Res.append(modif_Final_Grid_L)
         
-        
     ppl.figure()
-    sp_name=[]
     
     for space in range (0, len(spacesL)):
-        
         to_plot = Res[space]
         # print(len(to_plot))
         x_values = real_spacesL[space]
+        
         
         for species in range(0, NS):
             # pour t = 0 
@@ -49,29 +59,40 @@ def plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_
                 ppl.plot(x_values, to_plot_log[i][species], color = colors[i], marker=SPECIES[species].marker, markersize=4)
     
     # griser les membranes : 
-    for Mb in Mb_pos:
-        pos_Mb = Mb[1]
-        i = pos_Mb[0]
+    for nb_membane in range(nb_mb) :
         
-        space1 = real_Rspace[i]
+        start_mb = pos_Mb_L[nb_membane][0]
+        
+        space1 = real_Rspace[start_mb]
         space2 = space1 + thickness
-         
+             
         ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
         
     ppl.plot([], [], color='black', label='t=0')  
     for i,t in enumerate(times_courbelin):
         ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
     
-    ppl.title(f"Concentration des especes {sp_name} dans l'espace au cours du temps")
-    ppl.xlabel("Position dans l'espace (x)")
+    ppl.title(f"Evolution of {[specie.name[0] for specie in SPECIES]} concentration throught a cellular membrane, in space and time")
+    ppl.xlabel("space position")
     ppl.ylabel("Concentration")
     ppl.legend(loc='upper right')
     ppl.grid()
     
     ppl.show()
 
-def plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos, thickness):
+def plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_dict):
     
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    # mb_type = Mb_dict["Type"]
+    thickness = Mb_dict["thickness"]
+    
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+        
+    # simu params
     colors = params_plot["colors"]
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
@@ -108,20 +129,20 @@ def plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos
                 ppl.plot(x_values, to_plot_log[i][species], color = colors[i], marker=SPECIES[species].marker, markersize=3) # colors[i], marker=SPECIES[species].marker, markersize=4
     
     # griser les membranes : 
-    for Mb in Mb_pos:
-        pos_Mb = Mb[1]
-        i = pos_Mb[0]
+    for nb_membane in range(nb_mb) :
         
-        space1 = real_Rspace[i]
+        start_mb = pos_Mb_L[nb_membane][0]
+        
+        space1 = real_Rspace[start_mb]
         space2 = space1 + thickness
-         
-        ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+             
+        ppl.axvspan(space1, space2, color='grey', alpha=0.5)  
         
     ppl.plot([], [], color='black', label='t=0')  
     for i,t in enumerate(times_courbelog):
         ppl.plot([], [], color=colors[i], label=f't={t:.5f}')
     
-    ppl.title(f"Evolution of {SPECIES[species].name[0]} concentration throught an osmotic membrane, in space and time", fontsize=18)
+    ppl.title(f"Evolution of {[specie.name[0] for specie in SPECIES]} concentration throught a cellular membrane, in space and time", fontsize=18)
     ppl.xlabel("Space position (x)", fontsize=16)
     ppl.ylabel("Concentration", fontsize=16)
     ppl.legend(loc='upper right')
@@ -132,8 +153,19 @@ def plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos
     ppl.show()
     
     
-def plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spacesL, SPECIES, Mb_pos, real_Rspace, thickness):
+def plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spacesL, SPECIES, Mb_dict):
     
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    # mb_type = Mb_dict["Type"]
+    thickness = Mb_dict["thickness"]    
+
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+      
+    # simu params
     colors = params_plot["colors"]
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
@@ -172,23 +204,23 @@ def plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spa
             to_plot_log = [to_plot[i] for i in log_indices]   
                 
             ppl.plot(x_values, to_plot_log[i][pos_sp], color = colors[i], marker=SPECIES[pos_sp].marker, markersize=4)
+    
     # griser les membranes : 
-
-    for Mb in Mb_pos:
-        pos_Mb = Mb[1]
-        i = pos_Mb[0]
-            
-        space1 = real_Rspace[i]
+    for nb_membane in range(nb_mb) :
+       
+        start_mb = pos_Mb_L[nb_membane][0]
+       
+        space1 = real_Rspace[start_mb]
         space2 = space1 + thickness
-         
+            
         ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
         
     ppl.plot([], [], color='black', label='t=0')  
     for i,t in enumerate(times_courbelog):
         ppl.plot([], [], color=colors[i], label=f't={t:.4f}')
 
-    ppl.title(f"Concentration des especes {sp_name} dans l'espace au cours du temps")
-    ppl.xlabel("Position dans l'espace (x)")
+    ppl.title(f"Evolution of {species_to_plot} concentration throught a cellular membrane, in space and time", fontsize=18)
+    ppl.xlabel("Space position")
     ppl.ylabel("Concentration")
     ppl.legend(loc='upper right')
     ppl.grid()
@@ -197,13 +229,21 @@ def plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spa
 
     ppl.show()
     
-def plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_pos, thickness):
+def plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_dict):
     
-    colors = params_plot["colors"]
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    thickness = Mb_dict["thickness"]    
+
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+    
+    # simu params
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
-    log_indices = params_plot["log_indices"]
-    times_courbelog = params_plot["times_courbelog"]
+    colors = params_plot["colors"]
     
     NS = len(SPECIES)
     
@@ -216,36 +256,31 @@ def plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_pos, thickness):
         
     
     ppl.figure()
-    sp_name=[]
-
+    
     for space in range (0, len(spacesL)):
-        # type(space)
-        # print(np.shape(Final_Grid_L))
-        npFinal_Grid_L = np.array(Final_Grid_L)
-        to_plot = npFinal_Grid_L[:, space, :, :]
+        
+        to_plot = Res[space]
         x_values = real_spacesL[space]
         
         for species in range(0, NS):
             # pour t = 0 
-            
             label = SPECIES[species].name if space == 0 else None
-            sp_name.append(SPECIES[species].name)if space == 0 else None
             
             ppl.plot(x_values, to_plot[0][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
-     # griser les membranes : 
-
-    for Mb in Mb_pos:
-         pos_Mb = Mb[1]
-         i = pos_Mb[0]
+     
+    # griser les membranes : 
+    for nb_membane in range(nb_mb) :
+        
+        start_mb = pos_Mb_L[nb_membane][0]
+        
+        space1 = real_Rspace[start_mb]
+        space2 = space1 + thickness
              
-         space1 = real_Rspace[i]
-         space2 = space1 + thickness
-          
-         ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+        ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
 
-    ppl.title(f"Concentration initiale (times = 0 ) de A en fonction de l'espace")
-    ppl.xlabel("Position dans l'espace (x)", fontsize=14)
-    ppl.ylabel("Concentration initale", fontsize=14)
+    ppl.title(f"Initial concentration (times = 0 ) of {[specie.name[0] for specie in SPECIES]}", fontsize=18)
+    ppl.xlabel("Space position", fontsize=14)
+    ppl.ylabel("Initial concentration", fontsize=14)
     ppl.legend(loc='upper right')
     ppl.grid()
 
@@ -253,14 +288,21 @@ def plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_pos, thickness):
 
     ppl.show()
     
-def plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness):
+def plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict):
     
-     
-    colors = params_plot["colors"]
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    thickness = Mb_dict["thickness"]    
+
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+    
+    # simu params 
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
-    log_indices = params_plot["log_indices"]
-    times_courbelog = params_plot["times_courbelog"]
+    colors = params_plot["colors"]
     
     NS = len(SPECIES)
     
@@ -272,7 +314,6 @@ def plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thick
         Res.append(modif_Final_Grid_L)
         
     ppl.figure()
-    sp_name=[]
 
     for space in range (0, len(spacesL)):
         
@@ -283,22 +324,21 @@ def plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thick
             # pour t = 0 
             label = SPECIES[species].name if space == 0 else None
             
-            ppl.plot(x_values, to_plot[len(times)-1][species], color = 'black', marker=SPECIES[species].marker, markersize=4, label=label)
-            print(to_plot[len(times)-1][species])
+            ppl.plot(x_values, to_plot[len(times)-1][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
+   
     # griser les membranes : 
-
-    for Mb in Mb_pos:
-        pos_Mb = Mb[1]
-        i = pos_Mb[0]
-            
-        space1 = real_Rspace[i]
+    for nb_membane in range(nb_mb) :
+        
+        start_mb = pos_Mb_L[nb_membane][0]
+        
+        space1 = real_Rspace[start_mb]
         space2 = space1 + thickness
-         
-        ppl.axvspan(space1, space2, color='grey', alpha=0.5) 
+             
+        ppl.axvspan(space1, space2, color='grey', alpha=0.5)  
 
-    ppl.title(f"Concentration finale (times = {times[len(times)-1]} ) de {sp_name} dans l'espace", fontsize=1)
-    ppl.xlabel("Position dans l'espace (x)")
-    ppl.ylabel("Concentration finale")
+    ppl.title(f"Final concentration (times = {times[len(times)-1]:.2f} ) of {[specie.name[0] for specie in SPECIES]}", fontsize=18)
+    ppl.xlabel("Space position")
+    ppl.ylabel("Final concentration")
     ppl.legend(loc='upper right')
     ppl.grid()
 
@@ -338,8 +378,19 @@ def plot_conservation(result_int, variations_relative, times, SPECIES):
     ppl.show()
     
 
-def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness ):
-     
+def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict ):
+    
+    # params membrane
+    nb_mb = Mb_dict["nb_mb"]
+    # mb_type = Mb_dict["Type"]
+    thickness = Mb_dict["thickness"]    
+
+    pos_Mb_L=[]
+    for i in range (1, nb_mb+1):
+        key = f"Mb{i}"
+        pos_Mb_L.append(Mb_dict[key])
+    
+    # simu params
     colors = params_plot["colors"]
     real_spacesL = params_plot["real_spacesL"]
     real_Rspace = params_plot["real_Rspace"]
@@ -384,15 +435,18 @@ def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thicknes
                         color=colors[j],
                         marker=SPECIES[species].marker,
                         markersize=2)  
-                
-
-    for Mb in Mb_pos:
-        i = Mb[1][0]
-        x1 = real_Rspace[i]
-        x2 = x1 + thickness
-
+    
+    # griser les membranes : 
+    for nb_membane in range(nb_mb) :
+        
+        start_mb = pos_Mb_L[nb_membane][0]
+        
+        space1 = real_Rspace[start_mb]
+        space2 = space1 + thickness
+        
         for t_val in times_courbelog:
-            ax.plot([t_val, t_val], [x1, x2], [0, 0], color='grey', alpha=0.3)
+            ax.plot([t_val, t_val], [space1, space2], [0, 0], color='grey', alpha=0.3)
+             
 
     ax.set_xlabel('Time (t)', fontsize=14)
     ax.set_ylabel('Space (x)', fontsize=14)
@@ -402,7 +456,7 @@ def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thicknes
     ax.set_xticklabels([])
 
 
-    ax.set_title(f"Evolution of {SPECIES[0].name[0]} concentration in space and time", fontsize=16)
+    ax.set_title(f"Evolution of {[specie.name[0] for specie in SPECIES]} concentration in space and time", fontsize=18)
 
     for j, t in enumerate(times_courbelog_3D):
         ax.plot([], [], [], color=colors[j], label=f't = {t:.1e}')
@@ -414,14 +468,10 @@ def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thicknes
     ppl.show()
     
     
-def plot_heatmap(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness ):
+def plot_heatmap(Final_Grid_L, times, spacesL, params_plot, SPECIES):
      
-    colors = params_plot["colors"]
     real_spacesL = params_plot["real_spacesL"]
-    real_Rspace = params_plot["real_Rspace"]
     times_courbelog = params_plot["times_courbelog"]
-    
-    NS = len(SPECIES)
     
     Res = []
     for i in range(0, len(Final_Grid_L[0])):
@@ -448,8 +498,6 @@ def plot_heatmap(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thi
     # Extraire les données
     to_plot = Res[space]  # shape: (Nt, NS, Nx)
     x_values = real_spacesL[space]
-    Nt = len(log_indices)
-    Nx = len(x_values)
     
     # Construction de la matrice de concentration [temps, espace]
     data = np.zeros((len(log_indices), len(x_values)))
