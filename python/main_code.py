@@ -13,8 +13,10 @@ import matplotlib.pyplot as ppl
 
 import ionocell
 
-import sys
+# import sys
 # sys.path.insert(0, '/Users/jleclezio/Documents/ionocell/python/Functions/')
+
+from NaK_functions import permeability_from_Na, Rho_from_Flux
 
 from Initiation_functions import calcul
 from Make_video import generate_images_new, create_video_from_images
@@ -30,21 +32,25 @@ ppl.rcParams['figure.figsize'] = [13, 6]
 '''Temps de simulation'''
 
 ti = 0
-tf = 1
+tf = 0.1
 
 '''Espace'''
 
+# nombre d'espace pour la simulation 
+space_nb = 2
+
 # 2**5, round(100*(4/9))
-nbmailles_x1 = 20
-nbmailles_x2 = 50
-nbmailles_x3 = round(100*(4/9))
+nbmailles_x1 = 50
+nbmailles_x2 = 30
+nbmailles_x3 = 50 
 
 allmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
 
-# ratio x1 vs x2: taille dans la cuve
-Respace1 = 1
-Respace2 = 1/2
-Respace3 = 4/9
+# ratio x1 vs x2: length for each space
+Cell = 1e-7
+Respace1 = 3/4
+Respace2 = 1/4
+Respace3 = 1/3
 all_Respace = [Respace1, Respace2, Respace3]
 
 
@@ -61,34 +67,35 @@ x3 = np.arange(nbmailles_x3)* delta_x3
 allspacesL = [x1, x2, x3]
 
 
-thickness = min(delta_x1, delta_x2)/2 #largeur de la membrane pour le plot
-
 x1_info = ionocell.Space(_number = 0, _type = "Cell", _two_wall = True, _one_inje = False ) 
 x2_info = ionocell.Space(_number = 1, _type = "Extra", _two_wall = True, _one_inje = False ) 
 x3_info =  ionocell.Space(_number = 2, _type = "Cell", _two_wall = True, _one_inje = False ) 
 allInfo_space = [x1_info, x2_info, x3_info]
 
+
 '''Membrane'''
 
-# nombre d'espace pour la simulation 
-space_nb = 1
+Membrane_list = ["non permeable", "osmotique", "electro-osmotique", "electro-NaK"]
 
-Membrane_list = ["osmotique implicite", "osmotique analytique", "electro-osmotique implicite", "non permeable"]
+thickness = min(delta_x1, delta_x2)/2 #largeur de la membrane 
 
-# consequences: 
-allMb_dict = {
+# dic on membrane features: 
+Mb_dict = {
+    "nb_mb" : space_nb-1,
     "Mb1" : [0,1],
-    # "Mb2" : [1,2], 
-    "Type" : Membrane_list[1],
-    "thickness" : thickness}
+    "Mb2" : [1,2], 
+    "Type" : Membrane_list[2],
+    "thickness" : thickness,
+    "potential" : -70e-3
+    }
 
 '''Especes'''
 
 # descriptions
-Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1.33, _perm_coeff = 10, _charge = +1, _marker= 'o')
-# Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 1.33, _perm_coeff = 1, _charge = +1, _marker= 'o')
-K = ionocell.Specie(_specie_name = "K", _diff_coeff = 1, _perm_coeff = 15, _charge = +1, _marker= 's') # d= 1.96
-Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 's')
+Na = ionocell.Specie(_specie_name = "Na", _diff_coeff =  1, _perm_coeff = 1, _charge = +1, _marker= 'o')
+# Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 0.1e-9, K : 5.2e-9, _perm_coeff = 1, _charge = +1, _marker= 'o')
+K = ionocell.Specie(_specie_name = "K", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's') # d= 1.96
+Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= 's')
 NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 10, _perm_coeff = 10, _charge = 0, _marker= 'd')
 OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 'd')
 H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's')
@@ -100,26 +107,40 @@ Marker = ["o", "d", "s", "h", "v"]
 # Type conditions initiales
 L1 = Respace1 # longueur de la cuve: arbitraire
 L2 = Respace2
+L3 = Respace3
+
+perturbation1 = 0.005
+
 
 var_g = 0.005 # largeur de la gaussienne
 Gauss_1_4_x1 = np.exp(-((x1-(L1*1/4))**2) / var_g) 
 Gauss_1_4_x2 = np.exp(-((x2-(L2*1/4))**2) / var_g)
 
 Gauss_1_2_x1 = np.exp(-((x1-(L1*1/2))**2) / var_g) 
-Gauss_1_2_x2 = np.exp(-((x2-(L2*1/2))**2) / var_g) 
+c = np.exp(-((x2-(L2*1/2))**2) / var_g) 
 
 
 Gauss_3_4_x1 = np.exp(-((x1-(L1*3/4))**2) / var_g) 
 Gauss_3_4_x2 = np.exp(-((x2-(L2*3/4))**2) / var_g)
+Gauss_3_4_x3 = np.exp(-((x3-(L3*3/4))**2) / var_g)
 
 cst_1_x1 = np.ones(nbmailles_x1)
 cst_1_x2 = np.ones(nbmailles_x2)
 
-Na_i = np.ones(nbmailles_x2)*0.01
-Na_e = np.ones(nbmailles_x1)*0.14
+Na_i = np.ones(nbmailles_x1)*0.01 
+Na_e = np.ones(nbmailles_x2)*0.14
 
-K_i = np.ones(nbmailles_x2)*0.14
-K_e = np.ones(nbmailles_x1)*0.004
+K_i = np.ones(nbmailles_x1)*0.14 
+K_e = np.ones(nbmailles_x2)*0.004
+
+Cl_i = np.ones(nbmailles_x1)*0.1
+Cl_e = np.ones(nbmailles_x2)*0.02
+
+K_ip = np.ones(nbmailles_x1)*0.14 - perturbation1
+K_ep = np.ones(nbmailles_x2)*0.004 + perturbation1
+
+Na_ip = np.ones(nbmailles_x1)*0.01  - perturbation1
+Na_ep = np.ones(nbmailles_x2)*0.14 + perturbation1
 
 Null_x1 = np.zeros(nbmailles_x1) 
 Null_x2 = np.zeros(nbmailles_x2)
@@ -128,23 +149,24 @@ Null_x3 = np.zeros(nbmailles_x3)
 cst_05_x1 = np.ones(nbmailles_x1)*0.5
 cst_05_x2 = np.ones(nbmailles_x2)*0.5
 
-
-# CI pour les especes
+# initial condition for all species
 IC_dict = {
-    "Na_x1": Gauss_1_4_x1, 
-    "Na_x2": Null_x2, 
-    "Na_x3": Null_x3, 
+    "Na_x1": Na_i, 
+    "Na_x2": Gauss_3_4_x2, 
+    "Na_x3": Gauss_3_4_x3, 
     
     
     "K_x1": K_i, 
     "K_x2": K_e, 
+    "K_x3" : Null_x3,
     
-    "Cl_x1": Gauss_3_4_x1, 
-    "Cl_x2": Null_x2,
+    "Cl_x1": Cl_i, 
+    "Cl_x2": Cl_e,
     "Cl_x3": Null_x3,
     
     "NaCl_x1": Null_x1, 
-    "NaCl_x2": Null_x2,
+    "NaCl_x2": cst_05_x2,
+    
     "OH_x1": Null_x1, 
     "OH_x2": Gauss_3_4_x2, 
     "H_x1": Null_x1, 
@@ -159,7 +181,7 @@ IC_dict = {
     # liste des especes utilisées poru la simulation (decrites: "Na", "Cl", "OH", "NaCl")
     # si pas decrite: rajouter les caracteristiques dans les dict + les CI
     # SEULE LISTE A MODIFIER POUR AJOUTER/ENLEVER DES ESPECES POUR UNE SIMULATION
-SPECIES = [Na, Cl, NaCl] 
+SPECIES = [Na, Cl] 
 
 
 '''Temps'''
@@ -172,7 +194,7 @@ dtmax_allsp = []
 for sp in SPECIES:
     D = sp.diff
     dtmax_sp = []
-    for es in range(0,space_nb):
+    for es in range(0, space_nb):
     
         dt = (alldelta_x[es]**2) / (2*D)
         
@@ -181,7 +203,6 @@ for sp in SPECIES:
     
 
 delta_t = min(min(sublist) for sublist in dtmax_allsp)
-
 
 '''nombre d'espace'''
 
@@ -192,33 +213,72 @@ delta_x = alldelta_x[:space_nb]
 Info_space = allInfo_space[:space_nb]
 Respace = all_Respace[:space_nb]
 
-Mb_pos = list(allMb_dict.items())[:space_nb-1]
-type_mb = list(allMb_dict.items())[-2]
-Thickness = list(allMb_dict.items())[-1]
 
 
-Mb_dict = dict(Mb_pos + [type_mb] + [Thickness])
+# Mb_pos = list(allMb_dict.items())[:space_nb-1]
+# type_mb = list(allMb_dict.items())[-2]
+# Thickness = list(allMb_dict.items())[-1]
 
+
+# Mb_dict = dict(Mb_pos + [type_mb] + [Thickness])
+
+
+'''Transporter'''
+L_transp = [None] # ["NaK"] # 
+
+dict_transporter= {
+    "NaK": {
+        'Rho': 1, 
+        'Na': 3, 
+        'K': -2}}
+
+'''NaK ATPase params'''
+
+Dict_Rho = {
+      "Na_x1": Na_i, 
+      "Na_x2": Na_e, 
+      
+      "K_x1": K_i, 
+      "K_x2": K_e, 
+      
+      "Cl_x1": Cl_i, 
+      "Cl_x2": Cl_e
+      }
+
+# def of Pk from PNa :
+if "NaK" in L_transp :
+    P_K = permeability_from_Na(SPECIES, Dict_Rho, spacesL, nbmailles_x, Mb_dict)
+
+    # if Mb_dict["Type"] == "electro-NaK":
+    print("NaK_mb")
+    for sp in SPECIES:
+        if sp.name[0] == "K":
+            sp.perm = P_K
+
+    Rho_NaK = Rho_from_Flux(SPECIES, Dict_Rho, spacesL, nbmailles_x, Mb_dict)
+    # Rho_NaK = 1 
+    dict_transporter["NaK"]['Rho'] = Rho_NaK
 
 
 '''reaction'''
 
-TFreaction = True
+# TFreaction = True
 
-d_react = {
-    "reaction0": {"reactif" : ["Na", "Cl"] , \
-                  "produit" : ["NaCl"],  \
-                  "cst_eq" : 1} }
+# d_react = {
+#     "reaction0": {"reactif" : ["Na", "Cl"] , \
+#                   "produit" : ["NaCl"],  \
+#                   "cst_eq" : 1} }
 
-# TFreaction = False
-# d_react = {}
+TFreaction = False
+d_react = {}
 
 
 """ Calculs """
+DIFF = True 
+TRANSP = False
+(Final_Grid_L, integrals_grid_L, times) = calcul(SPECIES, spacesL, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Mb_dict, Info_space, L_transp, dict_transporter, DIFF, TRANSP)
 
-(Final_Grid_L, integrals_grid_L, times) = calcul(SPECIES, spacesL, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Mb_dict, Info_space)
-
-
+print("Diff = ", DIFF, ", Transp = ", TRANSP)
 integrals_grid_L = np.array(integrals_grid_L)
 
 NS = len(SPECIES)
@@ -226,7 +286,7 @@ NS = len(SPECIES)
 
 """ Analyse de la conservation """  
 # seuil de tolérance
-tolerance = 0.05
+tolerance = 5e-4
 
 result_int = np.zeros(integrals_grid_L[:, 0, :].shape) 
 
@@ -273,7 +333,9 @@ log_indices_1 = np.logspace(0, np.log10((len(times)/2)-1), int(nb_courbe_t/2), d
 log_indices_2 = np.logspace(0, np.log10((len(times)/2)-1), int(nb_courbe_t/2), dtype=int) + round(len(times)/2)
 
 log_indices_2log = np.concatenate([log_indices_1, log_indices_2])
-times_courbelog_2log = np.array(times)[log_indices_2log]
+# times_courbelog_2log = np.array(times)[log_indices_2log]
+
+
 
 
 real_spacesL = []
@@ -283,9 +345,14 @@ for i in range(len(spacesL)):
     real_spacesL.append(spacesL[i] + offset)
     real_Rspace.append(Respace[i] + offset)
     
+    
+real_spacesL[1] = real_spacesL[1]+thickness
+real_Rspace[1] = real_Rspace[1]+thickness
+    
 # recup element en lispace   
 indices = np.linspace(0, (len(times) - 1), nb_courbe_t, dtype=int)
 times_courbelin = np.array(times)[indices]
+
 
 
 params_plot = {
@@ -297,25 +364,25 @@ params_plot = {
     "log_indices" : log_indices,
     "times_courbelog" : times_courbelog, 
     "log_indices_2log" : log_indices_2log,
-    "times_courbelog_2log" : times_courbelog_2log
+    # "times_courbelog_2log" : times_courbelog_2log
     }
 
 '''Plot final'''
 
 # plot all species, in time and space, 2 scale of time : linear or log
-plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos, thickness)
+# plot_inTime_andSpace_linear(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_dict)
 
-plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_pos, thickness)
+plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_dict)
 
 # plot for one species, scale time in log
-species_to_plot = "Na"
-plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spacesL, SPECIES, Mb_pos, real_Rspace, thickness)
+species_to_plot = "Cl"
+# plot_TimeandSpace_oneSpecies(Final_Grid_L, species_to_plot, params_plot, spacesL, SPECIES, Mb_dict)
 
 # plot all species, initial condition, t=0 
-plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_pos, thickness)
+plot_t0(Final_Grid_L, spacesL, params_plot, SPECIES, Mb_dict)
 
 # plot all species, final condition t=tfin
-plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness)
+plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict)
     
 # analyse de la conservation
 plot_conservation(result_int, variations_relative, times, SPECIES)
@@ -327,18 +394,18 @@ plot_conservation(result_int, variations_relative, times, SPECIES)
     # Log : choix des coubres en log dans le temps
     # Equal : choix des courbe de facon equidistante dans le temps
     
-change_log_time = "Log"
+# change_log_time = "Log"
 
-images = generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_pos, SPECIES, thickness, change_log_time, nb_frames=100)
+# images = generate_images_new(Final_Grid_L, times, spacesL, Respace, Mb_pos, SPECIES, thickness, change_log_time, nb_frames=100)
 
 # create_video_from_images(images, "Results/video/Diff_simple_Na.mp4", fps=8)
 
 
 """ 3D plot"""
 
-plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness)
+# plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness)
 
 
 """HEAT MAP"""
 
-plot_heatmap(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness )
+# plot_heatmap(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness )
