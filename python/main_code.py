@@ -32,12 +32,12 @@ ppl.rcParams['figure.figsize'] = [13, 6]
 '''Temps de simulation'''
 
 ti = 0
-tf = 0.1
+tf = 1e-5
 
 '''Espace'''
 
 # nombre d'espace pour la simulation 
-space_nb = 2
+space_nb = 1
 
 # 2**5, round(100*(4/9))
 nbmailles_x1 = 50
@@ -47,9 +47,9 @@ nbmailles_x3 = 50
 allmailles_x = [nbmailles_x1, nbmailles_x2, nbmailles_x3]
 
 # ratio x1 vs x2: length for each space
-Cell = 1e-7
-Respace1 = 3/4
-Respace2 = 1/4
+Cell = 5e-5
+Respace1 = Cell
+Respace2 = Cell/4
 Respace3 = 1/3
 all_Respace = [Respace1, Respace2, Respace3]
 
@@ -84,7 +84,7 @@ Mb_dict = {
     "nb_mb" : space_nb-1,
     "Mb1" : [0,1],
     "Mb2" : [1,2], 
-    "Type" : Membrane_list[2],
+    "Type" : Membrane_list[1],
     "thickness" : thickness,
     "potential" : -70e-3
     }
@@ -92,14 +92,19 @@ Mb_dict = {
 '''Especes'''
 
 # descriptions
-Na = ionocell.Specie(_specie_name = "Na", _diff_coeff =  1, _perm_coeff = 1, _charge = +1, _marker= 'o')
-# Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 0.1e-9, K : 5.2e-9, _perm_coeff = 1, _charge = +1, _marker= 'o')
-K = ionocell.Specie(_specie_name = "K", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's') # d= 1.96
-Cl = ionocell.Specie(_specie_name = "Cl", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= 's')
-NaCl = ionocell.Specie(_specie_name = "NaCl", _diff_coeff = 10, _perm_coeff = 10, _charge = 0, _marker= 'd')
-OH = ionocell.Specie(_specie_name = "OH", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 'd')
-H = ionocell.Specie(_specie_name = "H", _diff_coeff = 1, _perm_coeff = 1, _charge = +1, _marker= 's')
-H20 = ionocell.Specie(_specie_name = "H2O", _diff_coeff = 1, _perm_coeff = 1, _charge = 0, _marker= 'v')
+Na = ionocell.Specie(_specie_name = "Na", _chemistry = "Sodium",  _diff_coeff = 29e-5 , _perm_coeff = 1e3, _charge = +1, _marker= 'o')
+# Na = ionocell.Specie(_specie_name = "Na", _diff_coeff = 0.1e-9, 29e-5, K : 5.2e-9, _perm_coeff = 1, _charge = +1, _marker= 'o')
+K = ionocell.Specie(_specie_name = "K", _chemistry = "Potassium", _diff_coeff = 5.2e-5, _perm_coeff = 1, _charge = +1, _marker= 's') # d= 1.96
+Cl = ionocell.Specie(_specie_name = "Cl", _chemistry = "Chlore", _diff_coeff = 1, _perm_coeff = 10, _charge = -1, _marker= 's')
+NaCl = ionocell.Specie(_specie_name = "NaCl", _chemistry = "Chlorure de sodium", _diff_coeff = 10, _perm_coeff = 10, _charge = 0, _marker= 'd')
+OH = ionocell.Specie(_specie_name = "OH", _chemistry = "Hydroxyle", _diff_coeff = 1, _perm_coeff = 1, _charge = -1, _marker= 'd')
+H = ionocell.Specie(_specie_name = "H", _chemistry = "Hydrogene", _diff_coeff = 1e-4, _perm_coeff = 1, _charge = +1, _marker= 's')
+H2O = ionocell.Specie(_specie_name = "H2O", _chemistry = "Eau", _diff_coeff = 1e-4, _perm_coeff = 1, _charge = 0, _marker= 'v')
+
+CO2 = ionocell.Specie(_specie_name = "CO2", _chemistry = "Dioxyde de carbone", _diff_coeff = 1e-4, _perm_coeff = 1, _charge = 0, _marker= 'o')
+HCO3  = ionocell.Specie(_specie_name = "HCO3", _chemistry = "Bicarbonate", _diff_coeff = 1e-4, _perm_coeff = 1, _charge = -1, _marker= 'd')
+
+
 
 Marker = ["o", "d", "s", "h", "v"]
 
@@ -109,18 +114,21 @@ L1 = Respace1 # longueur de la cuve: arbitraire
 L2 = Respace2
 L3 = Respace3
 
-perturbation1 = 0.005
+perturbation1 = 0.01
+perturbation2 = 0.5
 
 
 var_g = 0.005 # largeur de la gaussienne
-Gauss_1_4_x1 = np.exp(-((x1-(L1*1/4))**2) / var_g) 
+sigma = L1/20
+var_g_c = 2 * sigma**2
+Gauss_1_4_x1 = np.exp(-((x1-(L1*1/4))**2) / var_g_c) 
 Gauss_1_4_x2 = np.exp(-((x2-(L2*1/4))**2) / var_g)
 
-Gauss_1_2_x1 = np.exp(-((x1-(L1*1/2))**2) / var_g) 
-c = np.exp(-((x2-(L2*1/2))**2) / var_g) 
+Gauss_1_2_x1 = np.exp(-((x1-(L1*1/2))**2) / var_g_c) 
+Gauss_1_2_x2 = np.exp(-((x2-(L2*1/2))**2) / var_g) 
 
 
-Gauss_3_4_x1 = np.exp(-((x1-(L1*3/4))**2) / var_g) 
+Gauss_3_4_x1 = np.exp(-((x1-(L1*3/4))**2) / var_g_c) 
 Gauss_3_4_x2 = np.exp(-((x2-(L2*3/4))**2) / var_g)
 Gauss_3_4_x3 = np.exp(-((x3-(L3*3/4))**2) / var_g)
 
@@ -151,8 +159,8 @@ cst_05_x2 = np.ones(nbmailles_x2)*0.5
 
 # initial condition for all species
 IC_dict = {
-    "Na_x1": Na_i, 
-    "Na_x2": Gauss_3_4_x2, 
+    "Na_x1": Gauss_1_2_x1, 
+    "Na_x2": Na_e, 
     "Na_x3": Gauss_3_4_x3, 
     
     
@@ -160,7 +168,7 @@ IC_dict = {
     "K_x2": K_e, 
     "K_x3" : Null_x3,
     
-    "Cl_x1": Cl_i, 
+    "Cl_x1": Gauss_3_4_x1, 
     "Cl_x2": Cl_e,
     "Cl_x3": Null_x3,
     
@@ -169,10 +177,19 @@ IC_dict = {
     
     "OH_x1": Null_x1, 
     "OH_x2": Gauss_3_4_x2, 
+    
     "H_x1": Null_x1, 
-    "H_x2": Gauss_3_4_x2, 
-    "H2O_x1": Null_x1, 
-    "H2O_x2": Null_x2
+    # "H_x2": Null_x2, 
+    
+    "H2O_x1": Gauss_1_4_x1, 
+    # "H2O_x2": cst_05_x2, 
+    
+    "CO2_x1" : Gauss_3_4_x1,
+    # "CO2_x2" : cst_05_x2,
+    
+    "HCO3_x1" : Null_x1,
+    # "HCO3_x2" : Null_x2
+    
     }
 
 
@@ -181,7 +198,7 @@ IC_dict = {
     # liste des especes utilisées poru la simulation (decrites: "Na", "Cl", "OH", "NaCl")
     # si pas decrite: rajouter les caracteristiques dans les dict + les CI
     # SEULE LISTE A MODIFIER POUR AJOUTER/ENLEVER DES ESPECES POUR UNE SIMULATION
-SPECIES = [Na, Cl] 
+SPECIES = [Na] 
 
 
 '''Temps'''
@@ -224,7 +241,7 @@ Respace = all_Respace[:space_nb]
 
 
 '''Transporter'''
-L_transp = [None] # ["NaK"] # 
+L_transp =   [None] # ["NaK"] #
 
 dict_transporter= {
     "NaK": {
@@ -265,8 +282,8 @@ if "NaK" in L_transp :
 # TFreaction = True
 
 # d_react = {
-#     "reaction0": {"reactif" : ["Na", "Cl"] , \
-#                   "produit" : ["NaCl"],  \
+#     "reaction0": {"reactif" : ["CO2", "H2O"] , \
+#                   "produit" : ["H", "HCO3"],  \
 #                   "cst_eq" : 1} }
 
 TFreaction = False
@@ -275,7 +292,7 @@ d_react = {}
 
 """ Calculs """
 DIFF = True 
-TRANSP = False
+TRANSP = True
 (Final_Grid_L, integrals_grid_L, times) = calcul(SPECIES, spacesL, IC_dict, d_react, nbmailles_x, ti, tf, delta_t, delta_x, TFreaction, Mb_dict, Info_space, L_transp, dict_transporter, DIFF, TRANSP)
 
 print("Diff = ", DIFF, ", Transp = ", TRANSP)
@@ -345,9 +362,9 @@ for i in range(len(spacesL)):
     real_spacesL.append(spacesL[i] + offset)
     real_Rspace.append(Respace[i] + offset)
     
-    
-real_spacesL[1] = real_spacesL[1]+thickness
-real_Rspace[1] = real_Rspace[1]+thickness
+if space_nb > 1 :    
+    real_spacesL[1] = real_spacesL[1]+thickness
+    real_Rspace[1] = real_Rspace[1]+thickness
     
 # recup element en lispace   
 indices = np.linspace(0, (len(times) - 1), nb_courbe_t, dtype=int)
@@ -403,7 +420,7 @@ plot_conservation(result_int, variations_relative, times, SPECIES)
 
 """ 3D plot"""
 
-# plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_pos, thickness)
+# plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict)
 
 
 """HEAT MAP"""
