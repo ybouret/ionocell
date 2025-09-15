@@ -148,7 +148,7 @@ def plot_inTime_andSpace_log(Final_Grid_L, params_plot, spacesL, SPECIES, Mb_dic
     ppl.legend(loc='upper right')
     ppl.grid()
     
-    # ppl.savefig("CSI/osmotic_membrane.pdf")
+    # ppl.savefig("CSI/react_diff.svg")
     
     ppl.show()
     
@@ -324,7 +324,7 @@ def plot_tLast(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict):
             # pour t = 0 
             label = SPECIES[species].name if space == 0 else None
             
-            ppl.plot(x_values, to_plot[len(times)-1][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
+            ppl.plot(x_values, to_plot[len(times)-2][species], color = colors[species], marker=SPECIES[species].marker, markersize=4, label=label)
    
     # griser les membranes : 
     for nb_membane in range(nb_mb) :
@@ -355,7 +355,7 @@ def plot_conservation(result_int, variations_relative, times, SPECIES):
 
     ppl.figure()
     for species in range(0, NS):
-        ppl.plot(times, [array[species] for array in result_int], label=SPECIES[species].name)
+        ppl.plot(times, [array[species] for array in result_int], label=SPECIES[species].name, marker='o', markersize=5)
     ppl.xlabel("Temps")
     ppl.ylabel("Integrale sur l'espace")
     ppl.title("Vérification de la conservation")
@@ -366,7 +366,7 @@ def plot_conservation(result_int, variations_relative, times, SPECIES):
     # variations relatives
     ppl.figure()
     for species in range(0,NS): 
-        ppl.plot(times, [array[species] for array in variations_relative], label=SPECIES[species].name)
+        ppl.plot(times, [array[species] for array in variations_relative], label=SPECIES[species].name, marker='o', markersize=5)
     ppl.xlabel("Temps")
     ppl.ylabel("Variations relative")
     ppl.title("Vérification de la conservation")
@@ -407,7 +407,7 @@ def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict ):
     
 
     #def nombre de courbe
-    nb_courbe_3D = 10
+    nb_courbe_3D = 8
     log_indices_3D = np.logspace(0, np.log10(len(times)-1), nb_courbe_3D, dtype=int) 
     times_courbelog_3D = np.array(times)[log_indices_3D.astype(int)]
 
@@ -448,22 +448,23 @@ def plot_3D(Final_Grid_L, times, spacesL, params_plot, SPECIES, Mb_dict ):
             ax.plot([t_val, t_val], [space1, space2], [0, 0], color='grey', alpha=0.3)
              
 
-    ax.set_xlabel('Time (t)', fontsize=14)
-    ax.set_ylabel('Space (x)', fontsize=14)
-    ax.set_zlabel('Concentration', fontsize=14)
+    ax.set_xlabel('Time (s)', fontsize=14)
+    ax.set_ylabel('Space (m)', fontsize=14)
+    ax.set_zlabel('Concentration (mol/m-3)', fontsize=14)
 
     ax.set_xticks([])
     ax.set_xticklabels([])
 
 
-    ax.set_title(f"Evolution of {[specie.name[0] for specie in SPECIES]} concentration in space and time", fontsize=18)
+    ax.set_title(f"Evolution of {[specie.chemistry for specie in SPECIES]} concentration in space and time", fontsize=18)
 
     for j, t in enumerate(times_courbelog_3D):
-        ax.plot([], [], [], color=colors[j], label=f't = {t:.1e}')
+        t = t*1e6
+        ax.plot([], [], [], color=colors[j], label=f't = {t:.2e}µs')
 
     ax.legend(loc='upper right', bbox_to_anchor=(0.85, 1.0), fontsize=12)
 
-    # ppl.savefig("CSI/diff_simple_timlog.pdf")
+    # ppl.savefig("../CSI/diff_simple_timlog_poster.svg")
 
     ppl.show()
     
