@@ -5,11 +5,18 @@ Created on Mon Apr 14 14:48:13 2025
 
 @author: jleclezio
 """
+import math 
 import numpy as np
 
+'''aucun flux'''
+
+def non_transport(Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge, Em):
+    
+    return (Grid_L)
+    
 '''flux osmotique, explicite'''
 
-def transport_mb_osmo(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm):
+def transport_mb_osmo(Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge, Em):
     """
     Étape de transport à travers la membrane via un gradient osmotique
 
@@ -61,20 +68,37 @@ def transport_mb_osmo(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm):
     P = v_perm
     
     # gradient osmotique  
-    CG = Grid_L[px1][nbm_x1 - 1] # gauche de la membrane
-    CD = Grid_L[px2][0] # droite de la membrane
+    CG = Grid_L[px1][nbm_x1 - 1].copy() # gauche de la membrane
+    CD = Grid_L[px2][0].copy() # droite de la membrane
 
     grad_osmo = (CG - CD)
     flux_osmo = P * grad_osmo
     
-    Grid_L[px1][nbm_x1-1] = Grid_L[px1][nbm_x1-1] - (flux_osmo/delta_x2)*delta_t # prise en compte du delta_x
-    Grid_L[px2][0] = Grid_L[px2][0] + (flux_osmo/delta_x1)*delta_t
+    Grid_L[px1][nbm_x1-1] = Grid_L[px1][nbm_x1-1] - (flux_osmo * delta_t)/delta_x2
+    Grid_L[px2][0] = Grid_L[px2][0] + (flux_osmo * delta_t)/delta_x1
     
     return (Grid_L)
 
+
+def flux_mb_osmo(Species, C_int, C_ext, Mb_1, nbmailles_x, delta_t, delta_x):
+        
+        #Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge, Em):
+   
+    px1 = Mb_1[0]
+    px2 = Mb_1[1]
+    
+    P = Species.perm
+    
+    # gradient osmotique  
+    grad_osmo = (C_int - C_ext)
+    flux_osmo = P * grad_osmo
+    
+    return (flux_osmo)
+
+
 '''flux osmotique, analytique'''
 
-def transport_mb_osmo_analyt(Grid_L, Mb_1, nbmailles_x, v_perm, delta_t, delta_x):
+def transport_mb_osmo_analyt(Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge, Em):
     """
     Étape de transport à travers la membrane via un gradient osmotique
     
@@ -112,34 +136,34 @@ def transport_mb_osmo_analyt(Grid_L, Mb_1, nbmailles_x, v_perm, delta_t, delta_x
     - Cgrad_x1, Cgrad_x2 : array
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
-    px1 = Mb_1[0]
-    px2 = Mb_1[1]
-
+    px1 = Mb_1[0] # espace gauche mb
+    px2 = Mb_1[1] # espace droite mb
+    
     Cgrad_x1 = Grid_L[px1]
     Cgrad_x2 = Grid_L[px2]
     
     nbm_x1 = nbmailles_x[px1]
-    
-    deltax1 = delta_x[px1]
-    deltax2 = delta_x[px2]
+
+    deltax1 = delta_x[px2]
+    deltax2 = delta_x[px1]
     
     #permeabilité
     P = v_perm
     
     vp2 = - ( (P/deltax1) + (P/deltax2) )
     
-    C0_x1 = Cgrad_x1[nbm_x1-1]
-    C0_x2 = Cgrad_x2[0]
+    C0_x1 = Cgrad_x1[nbm_x1-1] # a gauceh de la mb
+    C0_x2 = Cgrad_x2[0] # a droite de la mb
     
     # Calcul des constantes C1 et C2
     C1 = (C0_x1 + (C0_x2 * (deltax2 / deltax1)) ) / (1 + (deltax2 / deltax1))
     C2 = (C0_x2 - C0_x1) / (1 + (deltax2 / deltax1))
    
     # Calcul de CE_x1(t) et CE_x2(t)
-    Ct_x1 = C1 - C2 * (deltax2 / deltax1) * np.exp(vp2*delta_t)
-    Ct_x2 = C1 + C2 * np.exp(vp2*delta_t)
+    Ct_x1 = C1 - C2 * (deltax2 / deltax1) * math.exp(vp2*t)
+    Ct_x2 = C1 + C2 * math.exp(vp2*t)
     
-    # on a les concentrations qui sont transportés : on les implemente
+    # on a les concentrations qui sont transportées : on les implemente
     Grid_1 = Grid_L[px1]
     Grid_2 = Grid_L[px2]
     
@@ -181,8 +205,29 @@ def PSI_fct(u):
 
     return (res)
 
-def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge):
-    # delta x a implementer 
+def flux_electro_osmo_sp(Species, C_int, C_ext, Mb_1, Em, nbmailles_x, delta_t, delta_x):
+    
+    # valeur fixe :
+    F = 96485 #cst de Faraday, J·V−1·mol−1
+    R = 8.314 #cst des gaz parfait, J·K−1·mol−1
+    T = 310 # K  =  37 degrees C 
+    
+    Zeta = (F*Em)/(R*T) # dimensionless
+    
+    P = Species.perm
+    Z = Species.charge
+    
+    Psi = PSI_fct(Z*Zeta)
+    
+    # calcul le flux
+    J = -P*Psi*(C_ext - (C_int * math.exp(Z*Zeta)))
+
+    return (J)
+    
+    
+    
+
+def transport_mb_electro_osmo_impl(Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, v_perm, v_charge, Em):
     """
     Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014 : 1 vers 2 
     
@@ -191,7 +236,7 @@ def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, 
     - specie : int
         Index de l'espèce étudiée dans la liste SPECIES
     - Cgrad_x1, Cgrad_x2 : array
-        Tableaux des concentrations utilisé pour le calcul des gradiemt
+        Tableaux des concentrations utilisé pour le calcul des gradients
     - TF_x1, TF_x1 : array
         Tableaux des concentrations mises à jour après réaction et diffusion pour notre espace temps
         Format : array([nombre d'espèces, nombre de mailles d'espace])
@@ -227,17 +272,17 @@ def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, 
     - Cgrad_x1, Cgrad_x2 : array
         Correspond aux concentrations au meme delta_t, apres reaction et diffusion
     """
-    
+
     px1 = Mb_1[0]
     px2 = Mb_1[1]
     
-    Cgrad_x1 = Grid_L[px1]
-    Cgrad_x2 = Grid_L[px2]
+    Cgrad_x1 = Grid_L[px1].copy()
+    Cgrad_x2 = Grid_L[px2].copy()
     
     nbm_x1 = nbmailles_x[px1]
-    
-    # deltax1 = delta_x[px1]
-    # deltax2 = delta_x[px2]
+
+    deltax1 = delta_x[px2]
+    deltax2 = delta_x[px1]
     
     # print("x1 = interieur, x2 = exterieur")
     P = v_perm
@@ -246,26 +291,26 @@ def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, 
     # valeur fixe :
     F = 96485 #cst de Faraday, J·V−1·mol−1
     R = 8.314 #cst des gaz parfait, J·K−1·mol−1
-    T = 310 #temperature en K : degrees Celsius + 273
+    T = 310 # K  =  37 degrees C 
     
-    Vm = +70e-3 # A MODIFIER
+    Vm = Em  # V
     
-    Zeta = (F*Vm)/(R*T)
+    Zeta = (F*Vm)/(R*T) # dimensionless
     
     Psi = PSI_fct(Z*Zeta)
     
-    Xint = (Cgrad_x1[nbm_x1-1])# /delta_x1
-    Xout = (Cgrad_x2[0]) # /delta_x2
+    Xint = (Cgrad_x1[nbm_x1-1])
+    Xout = (Cgrad_x2[0])
     
     # calcul le flux
-    J = -P*Psi*(Xout - Xint * np.exp(Z*Zeta))
+    J = -P*Psi*(Xout - (Xint * math.exp(Z*Zeta)))
     
     # exchange at the membrane 
-    Grid_1 = Grid_L[px1]
-    Grid_2 = Grid_L[px2]
+    Grid_1 = Grid_L[px1].copy()
+    Grid_2 = Grid_L[px2].copy()
     
-    Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - (J*delta_t) # *delta_x1
-    Grid_2[0] = Grid_2[0] + (J*delta_t) # *delta_x2
+    Grid_1[nbm_x1-1] = Grid_1[nbm_x1-1] - (J*delta_t)/deltax1
+    Grid_2[0] = Grid_2[0] + (J*delta_t)/deltax2  
     
     Grid_L[px1] = Grid_1
     Grid_L[px2] = Grid_2
@@ -273,49 +318,160 @@ def transport_mb_electro_osmo_impl(Grid_L, Mb_1, nbmailles_x, delta_t, delta_x, 
     return (Grid_L)
 
 
-'''flux electro osmotique, analytique'''
-# EN COURS
+def transport_mb_electro_osmo_NaK(SPECIES, Grid_L, t, Mb_1, nbmailles_x, delta_t, delta_x, Em, Rho_NaK):
 
-def transport_mb_electro_osmo_analy(SPECIES, specie, Cgrad_x1, Cgrad_x2, TF_x1, TF_x2, N, M, delta_t, delta_x, v_perm, v_charge):
-    """
-    Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014
-    """
-    # print("x1 = interieur, x2 = exterieur")
-    P = v_perm
-    Z = v_charge
+    px1 = Mb_1[0]
+    px2 = Mb_1[1]
+    nbm_x1 = nbmailles_x[px1]
+
+    deltax1 = delta_x[px2]
+    deltax2 = delta_x[px1]
     
     # valeur fixe :
     F = 96485 #cst de Faraday, J·V−1·mol−1
     R = 8.314 #cst des gaz parfait, J·K−1·mol−1
-    T = 310 #temperature en K : degrees Celsius + 273
+    T = 310 # K  =  37 degrees C 
+    Vm = Em  # V
     
-    Vm = -30e-3
+    Zeta = (F*Vm)/(R*T) # dimensionless
     
-    Zeta = (F*Vm)/(R*T)
     
-    Psi = PSI_fct(Z*Zeta)
+    sp_num = 0
+    for sp in SPECIES:
+        name_sp = sp.name[0]
+        v_perm = sp.perm
+        v_charge = sp.charge
+        
+        Grid_to_transp_sp = [arr[sp_num] for arr in Grid_L]
+        
+        if name_sp == "K":
+            
+            K_pos = sp_num
+            
+            # def J_elect_osmo_K :
+            Cgrad_x1 = Grid_to_transp_sp[px1].copy()
+            Cgrad_x2 = Grid_to_transp_sp[px2].copy()
+            
+            P = v_perm
+            Z = v_charge
+            
+            Psi = PSI_fct(Z*Zeta)
+            
+            Xint = (Cgrad_x1[nbm_x1-1])
+            Xout = (Cgrad_x2[0])
+            
+            # K_e = Xout
+            
+            # flux
+            J_elect_osmo_K = -P*Psi*(Xout - (Xint * math.exp(Z*Zeta)))
+            print(J_elect_osmo_K, "J_elect_osmo_K")
+            
+        elif name_sp == "Na":
+            
+            Na_pos = sp_num
+            
+            # def J_elect_osmo_Na :
+            Cgrad_x1 = Grid_to_transp_sp[px1].copy()
+            Cgrad_x2 = Grid_to_transp_sp[px2].copy()
+
+            P = v_perm
+            Z = v_charge
+            
+            Psi = PSI_fct(Z*Zeta)
+            
+            Xint = (Cgrad_x1[nbm_x1-1])
+            Xout = (Cgrad_x2[0])
+            
+            # Na_i = Xint
+            
+            # flux
+            J_elect_osmo_Na = -P*Psi*(Xout - (Xint * math.exp(Z*Zeta)))
+            print(J_elect_osmo_Na, "J_elect_osmo_Na")
+            
+        sp_num = sp_num+1
     
-    E = np.exp(Z*Zeta)
     
-    Xg0 = Cgrad_x1[specie][N-1]
-    Xd0 = Cgrad_x2[specie][0]
+    # Vmax_NaK = 1.64
+    # K_Nai = 10e-3
+    # K_Ke = 1e-3
     
-    # calcul le flux
+    # Na_sat = (Na_i)/(K_Nai + Na_i)
+    # K_sat = (K_e)/(K_Ke + K_e)
     
-# full analytique : pas bon + trop de proba d'erreur de signe
-# on veut : semi analytique
-    Xg = (-1/(E-1)) * (-E*Xd0 + np.exp(Z*Zeta + ((E-1)*P*delta_t*Zeta*Psi/delta_x))*Xd0 + E*Xg0 - np.exp((E-1)*P*delta_t*Zeta*Psi/delta_x)*Xg0)
-    Xd = (1/(E+1)) * (Xd0 + np.exp(Z*Zeta + ((E+1)*P*delta_t*Zeta*Psi/delta_x))*Xd0 + Xg0 - np.exp((E+1)*P*delta_t*Zeta*Psi/delta_x)*Xg0)
+    # Rho_NaK = Vmax_NaK * Na_sat**3 * K_sat**2
+    
+    J_tot_K = J_elect_osmo_K - 2 * Rho_NaK
+    # print(J_tot_K, "J_tot_K")
+    
+    J_tot_Na = J_elect_osmo_Na + 3 * Rho_NaK
+    # print(J_tot_Na, "J_tot_Na") 
+    
+    
+    # pour K : 
+    Grid_K1 = Grid_L[px1][K_pos]
+    Grid_K2 = Grid_L[px2][K_pos]
+    
+    # Grid_K1[nbm_x1-1] = Grid_K1[nbm_x1-1] - (J_tot_K*delta_t)/deltax1 
+    Grid_K2[0] = Grid_K2[0] + (J_tot_K*delta_t)/deltax2
+    
+    Grid_L[px1][K_pos] = Grid_K1
+    Grid_L[px2][K_pos] = Grid_K2
+    
+    # pour Na : 
+    Grid_Na1 = Grid_L[px1][Na_pos]
+    Grid_Na2 = Grid_L[px2][Na_pos]
+    
+    Grid_Na1[nbm_x1-1] = Grid_Na1[nbm_x1-1] - (J_tot_Na*delta_t)/deltax1 
+    Grid_Na2[0] = Grid_Na2[0] + (J_tot_Na*delta_t)/deltax2
+    
+    Grid_L[px1][Na_pos] = Grid_Na1
+    Grid_L[px2][Na_pos] = Grid_Na2
+    
+    return Grid_L
+
+# '''flux electro osmotique, analytique'''
+# # EN COURS
+
+# def transport_mb_electro_osmo_analy(SPECIES, specie, Cgrad_x1, Cgrad_x2, TF_x1, TF_x2, N, M, delta_t, delta_x, v_perm, v_charge):
+#     """
+#     Étape de transport à travers la membrane avec equation GHK, recuperation du modele de 2014
+#     """
+#     # print("x1 = interieur, x2 = exterieur")
+#     P = v_perm
+#     Z = v_charge
+    
+#     # valeur fixe :
+#     F = 96485 #cst de Faraday, J·V−1·mol−1
+#     R = 8.314 #cst des gaz parfait, J·K−1·mol−1
+#     T = 310 #temperature en K : degrees Celsius + 273
+    
+#     Vm = -30e-3
+    
+#     Zeta = (F*Vm)/(R*T)
+    
+#     Psi = PSI_fct(Z*Zeta)
+    
+#     E = np.exp(Z*Zeta)
+    
+#     Xg0 = Cgrad_x1[specie][N-1]
+#     Xd0 = Cgrad_x2[specie][0]
+    
+#     # calcul le flux
+    
+# # full analytique : pas bon + trop de proba d'erreur de signe
+# # on veut : semi analytique
+#     Xg = (-1/(E-1)) * (-E*Xd0 + np.exp(Z*Zeta + ((E-1)*P*delta_t*Zeta*Psi/delta_x))*Xd0 + E*Xg0 - np.exp((E-1)*P*delta_t*Zeta*Psi/delta_x)*Xg0)
+#     Xd = (1/(E+1)) * (Xd0 + np.exp(Z*Zeta + ((E+1)*P*delta_t*Zeta*Psi/delta_x))*Xd0 + Xg0 - np.exp((E+1)*P*delta_t*Zeta*Psi/delta_x)*Xg0)
 
     
-    # # exchange at the membrane 
-    TF_x1[specie][N-1] = Xg
-    TF_x2[specie][0] = Xd
+#     # # exchange at the membrane 
+#     TF_x1[specie][N-1] = Xg
+#     TF_x2[specie][0] = Xd
    
     
-    # if np.array_equal(TF_x1, TFx1_avt):
-    #     print("cool x1")
-    # else:
-    #     print("pas egal x1")
+#     # if np.array_equal(TF_x1, TFx1_avt):
+#     #     print("cool x1")
+#     # else:
+#     #     print("pas egal x1")
     
-    return (TF_x1, TF_x2)
+#     return (TF_x1, TF_x2)
