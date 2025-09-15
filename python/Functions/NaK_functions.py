@@ -54,7 +54,6 @@ def permeability_from_Na(Species_L, dict_CI, list_space, nbmailles, dict_Mb):
     return P_K
 
 def Rho_from_Flux(Species_L, dict_CI, list_space, nbmailles, dict_Mb):
-    
     # calcul de flux electro osmotique : 
         
     F = 96485 #cst de Faraday, J·V−1·mol−1
@@ -78,7 +77,7 @@ def Rho_from_Flux(Species_L, dict_CI, list_space, nbmailles, dict_Mb):
             
             C_i = dict_CI.get(SP_i)[nbmailles[0]-1]
             C_e = dict_CI.get(SP_e)[0]
-                
+
             P = species.perm
             Z = species.charge
                 
@@ -87,11 +86,11 @@ def Rho_from_Flux(Species_L, dict_CI, list_space, nbmailles, dict_Mb):
                 
             # flux
             J_elect_osmo = -P*Psi*(C_e - (C_i * math.exp(Z*Zeta)))
-                
+
             vars_dict[f"{name_sp}"] = J_elect_osmo
     
     # calcul de rho:
-    
+
     for sp in vars_dict.keys():
         if sp == "Na":
             Rho_Na = (1/3)*(-vars_dict[sp])
@@ -103,7 +102,6 @@ def Rho_from_Flux(Species_L, dict_CI, list_space, nbmailles, dict_Mb):
         Rho_NaK = Rho_Na
         print(Rho_NaK, "Rho_NaK")
         return Rho_NaK
-    
     
     
     else :
