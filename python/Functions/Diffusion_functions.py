@@ -5,7 +5,7 @@ Created on Mon Apr 14 14:49:52 2025
 
 @author: jleclezio
 """
-
+import numpy as np
 def diffusion_two_wall(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
     Étape de diffusion des espèces à travers l'espace pour un pas de temps.
@@ -47,28 +47,27 @@ def diffusion_two_wall(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_co
     - TSx1, TSx2 : array
         Correspond aux concentrations au pas de temps précédent avec la reaction d'implementer (si TFreaction = True)
     """      
-    
+    # print(np.shape(Grid_to_diff), "fct")
     D = v_coeffdiff
     
     alpha = (D * delta_t) / delta_x**2 
-        
+
     nbm = nbmailles_x
     
-    Gfin = Grid_to_diff.copy()
-    Gfin_sp = Gfin[specie]
+    Gfin_sp = Grid_to_diff.copy()
 
     # diffusion inside
     for i in range(1, nbm-1): # do not take into account the boundary
-        Gfin_sp[i] = Grid_to_diff[specie][i] + alpha *(Grid_to_diff[specie][i+1] - 2*Grid_to_diff[specie][i] + Grid_to_diff[specie][i-1])
+        Gfin_sp[i] = Grid_to_diff[i] + alpha *(Grid_to_diff[i+1] - 2*Grid_to_diff[i] + Grid_to_diff[i-1])
 
     # no flux: boundary
-    Gfin_sp[0] = (4*Grid_to_diff[specie][1] - Grid_to_diff[specie][2])/3  # à x = 0 
-    Gfin_sp[nbm-1] = (4*Grid_to_diff[specie][nbm-2] - Grid_to_diff[specie][nbm-3])/3 # à x = 1
-
-    Grid_diff = Gfin
+    Gfin_sp[0] = (4*Grid_to_diff[1] - Grid_to_diff[2])/3  # x = 0 
+    Gfin_sp[nbm-1] = (4*Grid_to_diff[nbm-2] - Grid_to_diff[nbm-3])/3 # x = 1
     
-    return (Grid_diff)
+    # Gfin_sp[0] = Grid_to_diff[1] # à x = 0 
+    # Gfin_sp[nbm-1] = Grid_to_diff[nbm-2] # à x = 1
 
+    return (Gfin_sp)
 
 def diffusion_one_wall_one_inject(specie, Grid_to_diff, nbmailles_x, delta_t, delta_x, v_coeffdiff):
     """
