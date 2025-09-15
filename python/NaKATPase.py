@@ -12,6 +12,8 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
+from Transport_functions import PSI_fct
+
 
 X = (10**(-7.2))/(1.8e-8) 
 
@@ -94,7 +96,9 @@ fact_P_values_NaK = -(2/3) * (Na_e - Na_i * np.exp(Zeta_values_NaK)) / (K_e - K_
 fact_P_values_NaK_cut = fact_P_values_NaK[1::]
 Em_values_NaK_cut = Em_values_NaK[1::]
 
-
+# value of fact_p for Em = -70mV (tolerence : 1e-2)
+POS_Em_70 = np.where(np.isclose(Em_values_NaK, -70e-3, atol=1e-4))[0]
+fact_P_values_NaK[POS_Em_70]
 
 # value of Em for fact_p = 1 (tolerence : 1e-2)
 POS_fact_P_1 = np.where(np.isclose(fact_P_values_NaK, 1.0, atol=1e-2))[0]
@@ -106,6 +110,7 @@ Em_values_NaK[POS_fact_P_1]
 plt.figure()
 
 plt.plot(Em_values_NaK * 1000, np.log10(fact_P_values_NaK))
+# plt.plot(Em_values_NaK * 1000, fact_P_values_NaK)
 
 plt.axhline(y=Upper_fact_P, color='red', linestyle=':', label='Upper_fact_P')
 plt.axhline(y=Lower_fact_P_NaK, color='blue', linestyle=':', label='Lower_fact_P')
@@ -122,6 +127,22 @@ plt.axhline(y=0, color='grey', linestyle='--')
 
 # plt.savefig("log_fact_P_fct_Em_NaKATPase.pdf")
 plt.show()
+
+'''Calcul Rho NaK'''
+
+# params simu : 
+Em_simu = -10e-3
+Zeta_m = (F*Em_simu)/(R*T)
+P_Na = 1
+
+Na_i = 1
+Na_e = 1
+
+# flux electrogenic 
+Je_Na = - P_Na * PSI_fct(z_Na*Zeta_m) * (Na_e-Na_i*math.exp(z_Na*Zeta_m))
+
+rho_Nak = -(1/3) * Je_Na
+
 
 
 
@@ -232,6 +253,23 @@ plt.axhline(y=0, color='grey', linestyle='--')
 plt.show()
 
 
+"""Study on NaK ATPase and NHE combined"""
+
+# we fixe P_H and P_Na
+UL_Em = (math.log(Na_e/Na_i))*F_Nernst/z_Na
+UL_Zeta = (F * UL_Em) / (R * T)
+
+LL_Em = (math.log(K_e)-math.log(K_i))*F_Nernst/z_K 
+LL_Zeta = (F * LL_Em) / (R * T)
 
 
+#test : value for P_H and P_Na
+P_Na = 1
+P_H = 1
+
+Up_P_K = -(2/3)*( (Na_e + Na_i*math.exp(UL_Zeta))*P_Na  + (H_e + H_i*math.exp(UL_Zeta))*P_H ) / (K_e + K_i*math.exp(UL_Zeta))
+
+Low_P_K = -(2/3)*( (Na_e + Na_i*math.exp(LL_Zeta))*P_Na  + (H_e + H_i*math.exp(LL_Zeta))*P_H ) / (K_e + K_i*math.exp(LL_Zeta))
+
+P_H * ( (H_e + H_i*math.exp(UL_Em)) / (Na_e + Na_i*math.exp(LL_Em)) )
 
