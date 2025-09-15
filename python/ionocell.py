@@ -28,13 +28,14 @@ class Grid:
 class Specie:
     """ params for each species """
     
-    def __init__(self, _specie_name, _diff_coeff, _perm_coeff, _charge, _marker):
+    def __init__(self, _specie_name, _chemistry, _diff_coeff, _perm_coeff, _charge, _marker):
         
         self.name = _specie_name,
         self.diff = _diff_coeff
         self.perm = _perm_coeff
         self.charge = _charge
         self.marker = _marker
+        self.chemistry = _chemistry
     
     def show(self):
         print("specie name =" , self.name)
